@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0d0915">
-  <meta name="description" content="Bốc ngẫu nhiên 5 lá từ bộ Tarot huyền bí 78 lá.">
-  <title>Bốc 5 lá Tarot</title>
+  <meta name="description" content="Nghi thức bốc từng lá Tarot từ bộ 78 lá, có xuôi và ngược ngẫu nhiên.">
+  <title>Nghi thức bốc 5 lá Tarot</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,37 +13,67 @@
     <header class="hero">
       <div>
         <p class="eyebrow">BỘ TAROT HUYỀN BÍ 78 LÁ</p>
-        <h1>Bốc 5 lá Tarot</h1>
-        <p class="subtitle">Bốc ngẫu nhiên 5 lá không trùng nhau, hiển thị cùng một trang để chụp ảnh.</p>
+        <h1>Nghi thức bốc 5 lá</h1>
+        <p class="subtitle">Ghi điều đang băn khoăn, tĩnh tâm trong vài nhịp thở rồi tự tay mở từng lá.</p>
       </div>
       <p class="load-status" id="loadStatus">Sẵn sàng</p>
     </header>
 
-    <section class="toolbar" aria-label="Điều khiển">
-      <button class="button primary" id="drawButton" type="button">Bốc ngẫu nhiên 5 lá</button>
-      <button class="button" id="captureButton" type="button" disabled>Chế độ chụp ảnh</button>
-      <button class="button" id="toggleNamesButton" type="button" disabled>Ẩn tên bên dưới</button>
-    </section>
-
-    <section class="spread-shell" id="spreadShell">
-      <div class="empty-state" id="emptyState">
-        <span class="moon">☾</span>
-        <h2>Chưa bốc bài</h2>
-        <p>Nhấn nút phía trên để bốc 5 lá.</p>
-      </div>
-      <div class="spread" id="spread" hidden></div>
-    </section>
-
-    <section class="question-panel" id="questionPanel" hidden>
-      <label for="question">Câu hỏi hoặc thông tin muốn AI giải thích</label>
-      <textarea id="question" rows="4" placeholder="Ví dụ: Tôi cần chú ý điều gì trong công việc thời gian tới?"></textarea>
+    <section class="intention-panel" id="intentionPanel">
+      <div class="step-label">BƯỚC 1 · ĐẶT Ý NIỆM</div>
+      <label for="question">Câu hỏi hoặc điều bạn muốn soi chiếu</label>
+      <textarea id="question" rows="4" maxlength="1000" placeholder="Ví dụ: Điều gì tôi cần nhìn rõ trong công việc thời gian tới?"></textarea>
+      <p class="field-hint">Viết một câu hỏi rõ ràng, tập trung vào điều bạn có thể suy ngẫm hoặc hành động.</p>
       <div class="question-actions">
-        <button class="button" id="copyButton" type="button">Sao chép câu hỏi + 5 lá</button>
-        <span id="copyStatus" role="status"></span>
+        <button class="button primary" id="ritualButton" type="button">Bắt đầu nghi thức</button>
+        <span id="questionStatus" role="status"></span>
       </div>
     </section>
 
-    <p class="notice">Tarot dùng để gợi mở suy ngẫm, không phải dự đoán chắc chắn.</p>
+    <section class="ritual-panel" id="ritualPanel" hidden aria-live="polite">
+      <div class="ritual-orbit" aria-hidden="true">
+        <span class="orbit-ring ring-one"></span>
+        <span class="orbit-ring ring-two"></span>
+        <span class="ritual-symbol">✦</span>
+      </div>
+      <p class="step-label">BƯỚC 2 · TĨNH TÂM</p>
+      <h2 id="ritualTitle">Hít vào thật chậm</h2>
+      <p class="ritual-message" id="ritualMessage">Giữ câu hỏi trong tâm trí. Thả lỏng vai và hít thở tự nhiên.</p>
+      <div class="countdown" id="countdown" aria-label="Đếm ngược"></div>
+      <button class="button subtle" id="skipRitualButton" type="button">Bỏ qua phần tĩnh tâm</button>
+    </section>
+
+    <section class="draw-panel" id="drawPanel" hidden>
+      <div class="draw-heading">
+        <div>
+          <p class="step-label">BƯỚC 3 · MỞ TỪNG LÁ</p>
+          <h2 id="drawTitle">Chạm vào lá thứ nhất</h2>
+          <p id="drawHint">Mỗi lá được chọn ngẫu nhiên, không trùng; hướng xuôi hoặc ngược cũng được random độc lập.</p>
+        </div>
+        <div class="toolbar" aria-label="Điều khiển">
+          <button class="button" id="captureButton" type="button" disabled>Chế độ chụp ảnh</button>
+          <button class="button" id="toggleNamesButton" type="button" disabled>Ẩn tên bên dưới</button>
+          <button class="button" id="restartButton" type="button">Nghi thức mới</button>
+        </div>
+      </div>
+
+      <section class="spread-shell" id="spreadShell">
+        <div class="spread" id="spread"></div>
+      </section>
+
+      <section class="result-panel" id="resultPanel" hidden>
+        <div>
+          <h2>Trải bài đã hoàn tất</h2>
+          <p>Có thể chụp 5 lá hoặc sao chép câu hỏi cùng kết quả để gửi AI giải thích.</p>
+        </div>
+        <div class="result-actions">
+          <button class="button primary" id="copyButton" type="button">Sao chép câu hỏi + 5 lá</button>
+          <span id="copyStatus" role="status"></span>
+        </div>
+      </section>
+    </section>
+
+    <p class="notice">Phần nghi thức nhằm tạo không gian tập trung và tự suy ngẫm; không chứng minh hay bảo đảm năng lực siêu nhiên. Tarot không thay thế tư vấn y tế, pháp lý hoặc tài chính.</p>
   </main>
 
   <button class="exit-capture" id="exitCaptureButton" type="button">Thoát chế độ chụp</button>
