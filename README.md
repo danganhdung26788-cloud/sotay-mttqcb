@@ -1,29 +1,38 @@
-# Bốc 5 lá Tarot
+# Nghi thức bốc 5 lá Tarot
 
-Ứng dụng web tĩnh để bốc ngẫu nhiên 5 lá từ bộ Tarot huyền bí 78 lá.
+Ứng dụng web tĩnh để thực hiện trải bài Tarot 5 lá từ bộ ảnh 78 lá.
 
-## Chức năng
+## Luồng sử dụng
 
-- Đủ 78 lá, mỗi lá được gán một Google Drive file ID riêng.
-- Bốc 5 lá không trùng nhau.
-- Chờ đủ 5 ảnh tải thành công mới mở **Chế độ chụp ảnh**.
-- Hiển thị 5 ảnh trong cùng một hàng ở chế độ chụp.
-- Lưu lần bốc gần nhất trên trình duyệt.
-- Nhập câu hỏi và sao chép danh sách 5 lá để gửi AI giải thích.
-- Không cần backend, cơ sở dữ liệu hoặc API key.
+1. Ghi câu hỏi hoặc điều đang băn khoăn.
+2. Bắt đầu phần tĩnh tâm ngắn.
+3. Đếm ngược và xáo bài.
+4. Tự tay mở từng lá từ trái sang phải.
+5. Sau khi mở đủ 5 lá, chụp ảnh hoặc sao chép câu hỏi cùng kết quả để gửi AI giải thích.
+
+## Nguyên tắc bốc bài
+
+- Chọn ngẫu nhiên 5 lá không trùng nhau bằng `crypto.getRandomValues` khi trình duyệt hỗ trợ.
+- Mỗi lá được random độc lập: 50% xuôi, 50% ngược.
+- Không ép một lần bốc phải có số lượng lá xuôi/ngược cố định.
+- Lá ngược được xoay ảnh 180 độ và ghi rõ **NGƯỢC**.
+- Kết quả xuôi/ngược được đưa vào nội dung sao chép cho AI.
+
+## Tính năng
+
+- Gán đủ 78 Google Drive file ID duy nhất.
+- Bốc từng lá tạo cảm giác hồi hộp.
+- Khóa lá kế tiếp cho đến khi lá hiện tại được mở.
+- Tĩnh tâm, lời dẫn và đếm ngược trước khi mở bài.
+- Âm thanh nhẹ tạo bằng Web Audio, không dùng file ngoài.
+- Lưu và khôi phục trải bài gần nhất.
+- Chế độ chụp 5 lá trên một hàng.
+- Không cần backend hoặc API key.
+
+## Lưu ý
+
+Phần “nghi thức” chỉ tạo không gian tập trung và tự suy ngẫm. Ứng dụng không tuyên bố chứng minh hoặc bảo đảm năng lực siêu nhiên. Tarot không thay thế tư vấn y tế, pháp lý hoặc tài chính.
 
 ## GitHub Pages
 
-Workflow `.github/workflows/pages.yml` tự triển khai khi có thay đổi trên nhánh `main`.
-
-Địa chỉ dự kiến:
-
 `https://danganhdung26788-cloud.github.io/sotay-mttqcb/`
-
-## Cấu trúc
-
-- `index.html`: giao diện.
-- `styles.css`: bố cục và chế độ chụp.
-- `app.js`: bốc bài, tải ảnh dự phòng, lưu trạng thái.
-- `cards.js`: ánh xạ 78 lá với 78 Google Drive file ID.
-- `TEST_REPORT.json`: kết quả kiểm tra cấu trúc dữ liệu.
