@@ -1,0 +1,14 @@
+{
+  "TOTAL_CARDS": 78,
+  "UNIQUE_CARD_IDS": 78,
+  "UNIQUE_DRIVE_FILE_IDS": 78,
+  "MAJOR_ARCANA": 22,
+  "MINOR_ARCANA": 56,
+  "WANDS": 14,
+  "CUPS": 14,
+  "SWORDS": 14,
+  "PENTACLES": 14,
+  "EMPTY_DRIVE_IDS": 0,
+  "MAPPING_METHOD": "8 generation batches; Drive filename batch position matched to the explicitly requested card order",
+  "STATUS": "PASS"
+}
