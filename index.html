@@ -1,58 +1,54 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sổ tay MTTQ Cao Bằng | Kho tài nguyên tra cứu</title>
-  <style>
-    :root{--bg:#f5f7fb;--card:#fff;--text:#123;--muted:#5b6575;--accent:#0b5cab;--line:#dbe3ee}
-    *{box-sizing:border-box} body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
-    .wrap{max-width:1100px;margin:0 auto;padding:24px} header{background:linear-gradient(135deg,#0b5cab,#1b8ad6);color:#fff;padding:32px 0}
-    .hero h1{margin:0 0 8px;font-size:34px}.hero p{margin:0;color:#eaf4ff;max-width:760px;line-height:1.6}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:22px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 4px 14px rgba(18,35,66,.05);text-decoration:none;color:inherit}
-    .card h2{margin:0 0 10px;font-size:18px}.card p{margin:0;color:var(--muted);line-height:1.55}
-    .badge{display:inline-block;background:#e8f2ff;color:#0b5cab;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700;margin-bottom:10px}
-    footer{margin:24px 0 6px;color:var(--muted);font-size:14px}
-    ul{margin:10px 0 0;padding-left:18px;color:var(--muted)} li{margin:6px 0}
-    nav{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
-    nav a{color:#fff;text-decoration:none;background:rgba(255,255,255,.16);padding:8px 12px;border-radius:999px}
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0d0915">
+  <meta name="description" content="Bốc ngẫu nhiên 5 lá từ bộ Tarot huyền bí 78 lá.">
+  <title>Bốc 5 lá Tarot</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <div class="wrap hero">
-      <div class="badge">sotay-mttqcb.netlify.app</div>
-      <h1>Ủy ban Mặt trận Tổ quốc tỉnh Bắc Kạn</h1>
-      <p>Kho lưu trữ tài liệu & cẩm nang tra cứu, hỗ trợ tra cứu nhanh chóng, phục vụ công tác quản lý, điều hành và tuyên truyền trong hệ thống Mặt trận.</p>
-      <nav>
-        <a href="#trangchu">Trang chủ</a>
-        <a href="#nhiemvu">Nhiệm vụ quan trọng</a>
-        <a href="#lienhe">Thông tin liên hệ</a>
-        <a href="#hoidap">Hỏi đáp</a>
-      </nav>
-    </div>
-  </header>
-  <main class="wrap">
-    <div class="grid">
-      <a class="card" id="trangchu" href="#">
-        <h2>Trang chủ</h2>
-        <p>Tài liệu tham khảo Trung ương, tỉnh và các nội dung nổi bật để tra cứu nhanh.</p>
-      </a>
-      <a class="card" id="nhiemvu" href="#">
-        <h2>Nhiệm vụ quan trọng cần thực hiện</h2>
-        <p>Theo dõi các việc đang làm, việc treo, việc sắp đến hạn và đầu việc cần xử lý sớm.</p>
-      </a>
-      <a class="card" id="lienhe" href="#">
-        <h2>Thông tin liên hệ</h2>
-        <p>Đầu mối phụ trách, số điện thoại, email và bộ phận liên quan.</p>
-      </a>
-      <a class="card" id="hoidap" href="#">
-        <h2>Hỏi đáp</h2>
-        <p>Câu hỏi thường gặp, hướng dẫn tra cứu và cách gửi yêu cầu tài liệu.</p>
-      </a>
-    </div>
-    <footer>Website khởi tạo bản mẫu ban đầu để tiếp tục cấu hình nội dung và giao diện.</footer>
+  <main class="app">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">BỘ TAROT HUYỀN BÍ 78 LÁ</p>
+        <h1>Bốc 5 lá Tarot</h1>
+        <p class="subtitle">Bốc ngẫu nhiên 5 lá không trùng nhau, hiển thị cùng một trang để chụp ảnh.</p>
+      </div>
+      <p class="load-status" id="loadStatus">Sẵn sàng</p>
+    </header>
+
+    <section class="toolbar" aria-label="Điều khiển">
+      <button class="button primary" id="drawButton" type="button">Bốc ngẫu nhiên 5 lá</button>
+      <button class="button" id="captureButton" type="button" disabled>Chế độ chụp ảnh</button>
+      <button class="button" id="toggleNamesButton" type="button" disabled>Ẩn tên bên dưới</button>
+    </section>
+
+    <section class="spread-shell" id="spreadShell">
+      <div class="empty-state" id="emptyState">
+        <span class="moon">☾</span>
+        <h2>Chưa bốc bài</h2>
+        <p>Nhấn nút phía trên để bốc 5 lá.</p>
+      </div>
+      <div class="spread" id="spread" hidden></div>
+    </section>
+
+    <section class="question-panel" id="questionPanel" hidden>
+      <label for="question">Câu hỏi hoặc thông tin muốn AI giải thích</label>
+      <textarea id="question" rows="4" placeholder="Ví dụ: Tôi cần chú ý điều gì trong công việc thời gian tới?"></textarea>
+      <div class="question-actions">
+        <button class="button" id="copyButton" type="button">Sao chép câu hỏi + 5 lá</button>
+        <span id="copyStatus" role="status"></span>
+      </div>
+    </section>
+
+    <p class="notice">Tarot dùng để gợi mở suy ngẫm, không phải dự đoán chắc chắn.</p>
   </main>
+
+  <button class="exit-capture" id="exitCaptureButton" type="button">Thoát chế độ chụp</button>
+
+  <script src="cards.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
