@@ -2,6 +2,53 @@ function isTruthy_(value) {
   return value === true || String(value).toUpperCase() === 'TRUE' || String(value) === '1';
 }
 
+function publicCacheMetaKey_() {
+  return 'PUBLIC_DIRECTORY_V11_META';
+}
+
+function publicCacheChunkKey_(index) {
+  return 'PUBLIC_DIRECTORY_V11_' + index;
+}
+
+function getPublicCache_() {
+  const cache = CacheService.getScriptCache();
+  const rawMeta = cache.get(publicCacheMetaKey_());
+  if (!rawMeta) return null;
+
+  try {
+    const meta = JSON.parse(rawMeta);
+    const count = Number(meta.count || 0);
+    if (!count || count > 30) return null;
+
+    const parts = [];
+    for (let i = 0; i < count; i++) {
+      const part = cache.get(publicCacheChunkKey_(i));
+      if (part == null) return null;
+      parts.push(part);
+    }
+    return JSON.parse(parts.join(''));
+  } catch (e) {
+    return null;
+  }
+}
+
+function putPublicCache_(payload) {
+  const cache = CacheService.getScriptCache();
+  const json = JSON.stringify(payload);
+  const chunkSize = 55000;
+  const count = Math.ceil(json.length / chunkSize);
+  if (!count || count > 30) return false;
+
+  for (let i = 0; i < count; i++) {
+    cache.put(
+      publicCacheChunkKey_(i),
+      json.slice(i * chunkSize, (i + 1) * chunkSize),
+      300
+    );
+  }
+  cache.put(publicCacheMetaKey_(), JSON.stringify({count: count}), 300);
+  return true;
+}
 
 function publicContactDto_(row, orgMap, groupMap) {
   return {
@@ -22,17 +69,11 @@ function publicContactDto_(row, orgMap, groupMap) {
   };
 }
 
-
 function getPublicDirectoryData(forceRefresh) {
-  const cache = CacheService.getScriptCache();
-  const cacheKey = 'PUBLIC_DIRECTORY_V1';
-
-
   if (!forceRefresh) {
-    const cached = cache.get(cacheKey);
-    if (cached) return JSON.parse(cached);
+    const cached = getPublicCache_();
+    if (cached) return cached;
   }
-
 
   const orgRows = tableObjects_(CONFIG.SHEETS.ORGANIZATIONS)
     .filter(x => String(x.status) === 'ACTIVE')
@@ -48,7 +89,6 @@ function getPublicDirectoryData(forceRefresh) {
     }))
     .sort((a,b) => a.level - b.level || a.sort_order - b.sort_order || a.org_name.localeCompare(b.org_name,'vi'));
 
-
   const groupRows = tableObjects_(CONFIG.SHEETS.GROUPS)
     .filter(x => String(x.status) === 'ACTIVE')
     .map(x => ({
@@ -61,16 +101,13 @@ function getPublicDirectoryData(forceRefresh) {
     }))
     .sort((a,b) => a.sort_order - b.sort_order || a.group_name.localeCompare(b.group_name,'vi'));
 
-
   const orgMap = Object.fromEntries(orgRows.map(x => [x.org_id, x.org_name]));
   const groupMap = Object.fromEntries(groupRows.map(x => [x.group_id, x.group_name]));
-
 
   const contactRows = tableObjects_(CONFIG.SHEETS.CONTACTS)
     .filter(x => String(x.status) === 'ACTIVE' && isTruthy_(x.public_flag))
     .map(x => publicContactDto_(x, orgMap, groupMap))
     .sort((a,b) => a.sort_order - b.sort_order || a.full_name.localeCompare(b.full_name,'vi'));
-
 
   const payload = {
     app: {
@@ -84,17 +121,15 @@ function getPublicDirectoryData(forceRefresh) {
     generated_at: nowIso_()
   };
 
-
-  const json = JSON.stringify(payload);
-  if (json.length < 95000) cache.put(cacheKey, json, 300);
+  putPublicCache_(payload);
   return payload;
 }
 
-
 function invalidatePublicDirectoryCache_() {
-  CacheService.getScriptCache().remove('PUBLIC_DIRECTORY_V1');
+  const cache = CacheService.getScriptCache();
+  cache.remove(publicCacheMetaKey_());
+  for (let i = 0; i < 30; i++) cache.remove(publicCacheChunkKey_(i));
 }
-
 
 function getPublicStats() {
   const data = getPublicDirectoryData(false);
