@@ -3,7 +3,7 @@
 Google Apps Script Web App quản lý và tra cứu danh bạ MTTQ tỉnh Cao Bằng theo mô hình 3 cấp.
 
 ## Trạng thái
-**V1.1 – Phase 4 BUILD READY, chờ runtime test/deploy.**
+**V1.1 – Phase 4 BUILD READY, GitHub CI PASS; chờ Apps Script runtime authorization/test.**
 
 Read-back baseline:
 - 57 đơn vị, trong đó 56 xã/phường.
@@ -26,12 +26,12 @@ Database vận hành: `1E1pOxwBiQI4GDehXrYYghwULUg6pGZhbILXEOs-vIcY`.
 - Regression tests Phase 4.
 
 ## Source of Truth
-Sau khi repo GitHub chính thức được tạo và push, `main` là source được phép deploy production. Drive giữ database, tài liệu và backup.
+GitHub `main` tại `danganhdung26788-cloud/sotay-mttqcb` là source code được phép deploy production. Google Drive giữ database, hồ sơ dự án và backup.
 
 ## Branch
-- `main`: baseline đã chốt.
+- `main`: source được phép deploy production.
 - `develop`: phát triển/kiểm thử.
-- tag: `v1.1-phase4-build-ready`.
+- `release/v1.1-phase4-build-ready`: checkpoint V1.1 Phase 4.
 
 ## Validate
 ```bash
@@ -39,4 +39,4 @@ node scripts/validate.mjs
 ```
 
 ## Apps Script
-Không commit `.clasp.json` hoặc `.clasprc.json`. Xem `docs/DEPLOYMENT.md`.
+Không commit `.clasp.json`, `.clasprc.json`, token hoặc mật khẩu. Xem `docs/DEPLOYMENT.md`.
