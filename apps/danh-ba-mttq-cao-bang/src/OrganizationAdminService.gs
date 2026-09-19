@@ -11,56 +11,66 @@ function listLevel3Organizations(token) {
     .sort((a,b) => a.parent_org_id.localeCompare(b.parent_org_id) || a.sort_order-b.sort_order);
 }
 
-
 function adminCreateLevel3(token, payload) {
-  const auth = requireAdminSession_(token);
+  requireAdminSession_(token);
+  payload = payload || {};
   const created = createLevel3Organization(
     token,
     String(payload.parent_org_id || ''),
-    String(payload.org_name || '').trim(),
-    String(payload.org_type || 'VILLAGE')
+    String(payload.org_name || ''),
+    normalizeLevel3Type_(payload.org_type || 'VILLAGE')
   );
   invalidatePublicDirectoryCache_();
   return created;
 }
 
-
 function adminUpdateLevel3(token, payload) {
   const auth = requireAdminSession_(token);
+  payload = payload || {};
   const org = findBy_(CONFIG.SHEETS.ORGANIZATIONS, 'org_id', payload.org_id);
   if (!org || Number(org.level) !== 3) throw new Error('Không tìm thấy đơn vị cấp 3.');
   requireOrgWrite_(auth.session, org.org_id);
-  if (payload.parent_org_id && String(payload.parent_org_id) !== String(org.parent_org_id)) {
-    requireOrgWrite_(auth.session, payload.parent_org_id);
-  }
 
+  const parentOrgId = String(payload.parent_org_id || org.parent_org_id);
+  requireLevel2Parent_(auth.session, parentOrgId);
 
-  const name = String(payload.org_name != null ? payload.org_name : org.org_name).trim();
+  const name = sanitizeText_(payload.org_name != null ? payload.org_name : org.org_name, 200);
   if (!name) throw new Error('Tên đơn vị không được để trống.');
-  const before = {parent_org_id:org.parent_org_id,org_name:org.org_name,status:org.status,sort_order:org.sort_order};
+  assertUniqueLevel3Name_(parentOrgId, name, org.org_id);
+
+  const before = {
+    parent_org_id:org.parent_org_id,
+    org_name:org.org_name,
+    org_type:org.org_type,
+    status:org.status,
+    sort_order:org.sort_order
+  };
   const patch = {
-    parent_org_id: String(payload.parent_org_id || org.parent_org_id),
+    parent_org_id: parentOrgId,
     org_name: name,
     short_name: name,
     normalized_name: normalizeText_(name),
-    org_type: String(payload.org_type || org.org_type || 'VILLAGE'),
-    sort_order: Number(payload.sort_order != null ? payload.sort_order : org.sort_order || 999),
-    status: String(payload.status || org.status || 'ACTIVE'),
+    org_type: normalizeLevel3Type_(payload.org_type || org.org_type || 'VILLAGE'),
+    sort_order: normalizeSortOrder_(
+      payload.sort_order != null ? payload.sort_order : org.sort_order,
+      org.sort_order || 999
+    ),
+    status: normalizeOrganizationStatus_(payload.status || org.status || 'ACTIVE'),
     updated_at: nowIso_()
   };
+
   const updated = updateByHeaders_(CONFIG.SHEETS.ORGANIZATIONS, org._row, patch);
   audit_(auth.session.username,'UPDATE_LEVEL3_ORG','ORGANIZATION',org.org_id,before,patch,'PASS');
   invalidatePublicDirectoryCache_();
   return updated;
 }
 
-
 function adminSetLevel3Status(token, orgId, status) {
   const auth = requireAdminSession_(token);
   const org = findBy_(CONFIG.SHEETS.ORGANIZATIONS, 'org_id', orgId);
   if (!org || Number(org.level) !== 3) throw new Error('Chỉ áp dụng cho cấp 3.');
   requireOrgWrite_(auth.session, orgId);
-  const updated = setOrganizationStatus(token, orgId, status);
+  const updated = setOrganizationStatus(token, orgId, normalizeOrganizationStatus_(status));
   invalidatePublicDirectoryCache_();
   return updated;
 }
