@@ -1,0 +1,70 @@
+name: Danh ba MTTQ - Deploy Apps Script
+
+on:
+  workflow_dispatch:
+    inputs:
+      description:
+        description: "Release note"
+        required: false
+        default: "Manual deploy from GitHub"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: danh-ba-mttq-apps-script-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: apps/danh-ba-mttq-cao-bang
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate source
+        run: node scripts/validate.mjs
+
+      - name: Install clasp
+        run: npm install --no-audit --no-fund
+
+      - name: Verify required secrets
+        shell: bash
+        run: |
+          test -n "${{ secrets.CLASPRC_JSON }}" || (echo "Missing CLASPRC_JSON" && exit 1)
+          test -n "${{ secrets.CLASP_JSON }}" || (echo "Missing CLASP_JSON" && exit 1)
+
+      - name: Configure clasp credentials
+        shell: bash
+        run: |
+          printf '%s' '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+          printf '%s' '${{ secrets.CLASP_JSON }}' > .clasp.json
+          chmod 600 ~/.clasprc.json .clasp.json
+
+      - name: Push source to Apps Script
+        run: npx clasp push -f
+
+      - name: Update existing Web App deployment
+        if: ${{ secrets.CLASP_DEPLOYMENT_ID != '' }}
+        run: |
+          npx clasp create-deployment \
+            --deploymentId "${{ secrets.CLASP_DEPLOYMENT_ID }}" \
+            --description "${{ inputs.description }} | GitHub ${GITHUB_SHA}"
+
+      - name: First-deployment gate
+        if: ${{ secrets.CLASP_DEPLOYMENT_ID == '' }}
+        run: |
+          echo "Source push completed."
+          echo "Create the first Web App deployment manually in Apps Script."
+          echo "Then save its deployment ID as CLASP_DEPLOYMENT_ID."
