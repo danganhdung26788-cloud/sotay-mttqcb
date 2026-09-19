@@ -69,7 +69,7 @@ function publicContactDto_(row, orgMap, groupMap) {
   };
 }
 
-function getPublicDirectoryData(forceRefresh) {
+function getPublicDirectoryData_(forceRefresh) {
   if (!forceRefresh) {
     const cached = getPublicCache_();
     if (cached) return cached;
@@ -131,8 +131,8 @@ function invalidatePublicDirectoryCache_() {
   for (let i = 0; i < 30; i++) cache.remove(publicCacheChunkKey_(i));
 }
 
-function getPublicStats() {
-  const data = getPublicDirectoryData(false);
+function getPublicStats_() {
+  const data = getPublicDirectoryData_(false);
   return {
     organizations: data.organizations.length,
     communes: data.organizations.filter(x => x.level === 2).length,

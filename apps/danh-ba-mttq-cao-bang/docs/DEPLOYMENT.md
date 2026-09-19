@@ -41,15 +41,15 @@ Không gửi nội dung `~/.clasprc.json`, refresh token hoặc mật khẩu và
 
 ## Sau khi source được push vào Apps Script
 1. Xác nhận quyền Sheets/Drive khi Google yêu cầu.
-2. Chạy `setupDatabase()` và xác nhận baseline.
-3. Nhập mật khẩu khởi tạo trực tiếp khi chạy `provisionAllAdminPasswords(...)`; không commit mật khẩu.
-4. Chạy `runPhase4RegressionTests()`.
+2. Chạy `setupDatabase_()` và xác nhận baseline.
+3. Nhập mật khẩu khởi tạo trực tiếp khi chạy `provisionAllAdminPasswords_(...)`; không commit mật khẩu.
+4. Chạy `runPhase4RegressionTests_()`.
 5. Tạo Web App deployment đầu tiên bằng Apps Script UI và tự chọn phạm vi truy cập phù hợp.
 6. Lưu deployment ID vào GitHub secret `CLASP_DEPLOYMENT_ID`.
 7. Các lần sau workflow cập nhật deployment hiện có bằng `clasp create-deployment --deploymentId ...`.
 
 ## Gate production
-- `runPhase4RegressionTests().ok === true`.
+- `runPhase4RegressionTests_().ok === true`.
 - Test `admin.caobang` + ít nhất 02 Admin xã.
 - Mutation chéo scope phải DENIED.
 - Avatar PASS.

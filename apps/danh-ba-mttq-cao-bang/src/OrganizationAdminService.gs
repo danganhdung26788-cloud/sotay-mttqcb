@@ -1,4 +1,4 @@
-function listLevel3Organizations(token) {
+function listLevel3Organizations_(token) {
   const auth = requireAdminSession_(token);
   const allowed = scopedOrgIds_(auth.session);
   return tableObjects_(CONFIG.SHEETS.ORGANIZATIONS)
@@ -11,10 +11,10 @@ function listLevel3Organizations(token) {
     .sort((a,b) => a.parent_org_id.localeCompare(b.parent_org_id) || a.sort_order-b.sort_order);
 }
 
-function adminCreateLevel3(token, payload) {
+function adminCreateLevel3_(token, payload) {
   requireAdminSession_(token);
   payload = payload || {};
-  const created = createLevel3Organization(
+  const created = createLevel3Organization_(
     token,
     String(payload.parent_org_id || ''),
     String(payload.org_name || ''),
@@ -24,7 +24,7 @@ function adminCreateLevel3(token, payload) {
   return created;
 }
 
-function adminUpdateLevel3(token, payload) {
+function adminUpdateLevel3_(token, payload) {
   const auth = requireAdminSession_(token);
   payload = payload || {};
   const org = findBy_(CONFIG.SHEETS.ORGANIZATIONS, 'org_id', payload.org_id);
@@ -65,12 +65,12 @@ function adminUpdateLevel3(token, payload) {
   return updated;
 }
 
-function adminSetLevel3Status(token, orgId, status) {
+function adminSetLevel3Status_(token, orgId, status) {
   const auth = requireAdminSession_(token);
   const org = findBy_(CONFIG.SHEETS.ORGANIZATIONS, 'org_id', orgId);
   if (!org || Number(org.level) !== 3) throw new Error('Chỉ áp dụng cho cấp 3.');
   requireOrgWrite_(auth.session, orgId);
-  const updated = setOrganizationStatus(token, orgId, normalizeOrganizationStatus_(status));
+  const updated = setOrganizationStatus_(token, orgId, normalizeOrganizationStatus_(status));
   invalidatePublicDirectoryCache_();
   return updated;
 }

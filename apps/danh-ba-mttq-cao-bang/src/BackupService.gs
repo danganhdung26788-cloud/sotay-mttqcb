@@ -26,7 +26,7 @@ function createDatabaseBackupInternal_(actor, note, mode) {
   return {ok:true,file_id:copy.getId(),url:copy.getUrl(),folder_id:folder.getId()};
 }
 
-function adminCreateDatabaseBackup(token, note) {
+function adminCreateDatabaseBackup_(token, note) {
   const auth = requireAdminSession_(token);
   requireProvinceAdmin_(auth.session);
   const out = createDatabaseBackupInternal_(auth.session.username,note,'MANUAL');
@@ -40,7 +40,7 @@ function normalizeBackupListLimit_(limit) {
   return Math.min(Math.floor(n),200);
 }
 
-function adminListBackups(token, limit) {
+function adminListBackups_(token, limit) {
   const auth = requireAdminSession_(token);
   requireProvinceAdmin_(auth.session);
   return tableObjects_(CONFIG.SHEETS.BACKUP_LOG)
@@ -82,7 +82,7 @@ function sheetDataRowCountByKey_(sh) {
   return count;
 }
 
-function adminPreviewRestore(token, backupFileId) {
+function adminPreviewRestore_(token, backupFileId) {
   const auth = requireAdminSession_(token);
   requireProvinceAdmin_(auth.session);
   const backup = registeredBackup_(backupFileId);
@@ -149,7 +149,7 @@ function copySheetValues_(sourceSs, targetSs, name) {
   dst.getRange(1,1,values.length,values[0].length).setValues(values);
 }
 
-function adminRestoreOperationalData(token, backupFileId, confirmation) {
+function adminRestoreOperationalData_(token, backupFileId, confirmation) {
   const auth = requireAdminSession_(token);
   requireProvinceAdmin_(auth.session);
 
@@ -158,7 +158,7 @@ function adminRestoreOperationalData(token, backupFileId, confirmation) {
   }
 
   registeredBackup_(backupFileId);
-  const preview = adminPreviewRestore(token,backupFileId);
+  const preview = adminPreviewRestore_(token,backupFileId);
   if (!preview.ok) throw new Error('Backup không đủ schema để restore.');
 
   return withScriptLock_(30000, () => {

@@ -1,4 +1,4 @@
-function listAdminUsers(token) {
+function listAdminUsers_(token) {
   const auth = requireAdminSession_(token);
   let rows = tableObjects_(CONFIG.SHEETS.USERS);
   if (!isProvinceAdmin_(auth.session)) rows = rows.filter(u => String(u.user_id) === String(auth.session.user_id));
@@ -9,7 +9,7 @@ function listAdminUsers(token) {
     password_version:String(u.password_version || 'V1'), last_login:String(u.last_login || '')
   }));
 }
-function adminResetUserPassword(token, userId, temporaryPassword) {
+function adminResetUserPassword_(token, userId, temporaryPassword) {
   const auth = requireAdminSession_(token);
   requireProvinceAdmin_(auth.session);
   if (!temporaryPassword || String(temporaryPassword).length < CONFIG.AUTH.MIN_PASSWORD_LENGTH) throw new Error('Mật khẩu tạm không đạt yêu cầu.');
@@ -30,7 +30,7 @@ function adminResetUserPassword(token, userId, temporaryPassword) {
     {credential_state:'PROVISIONED',must_change_password:true,password_version:'V'+(oldVersion+1)},'PASS');
   return {ok:true,user_id:userId};
 }
-function adminSetUserStatus(token, userId, status) {
+function adminSetUserStatus_(token, userId, status) {
   const auth = requireAdminSession_(token);
   requireProvinceAdmin_(auth.session);
   if (!['ACTIVE','INACTIVE','LOCKED'].includes(String(status))) throw new Error('Trạng thái không hợp lệ.');

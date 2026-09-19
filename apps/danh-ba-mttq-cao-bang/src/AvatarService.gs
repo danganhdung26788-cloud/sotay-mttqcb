@@ -31,7 +31,7 @@ function avatarMagicMatches_(mime, bytes) {
   return false;
 }
 
-function adminUploadAvatar(token, contactId, payload) {
+function adminUploadAvatar_(token, contactId, payload) {
   const auth = requireAdminSession_(token);
   const contact = findBy_(CONFIG.SHEETS.CONTACTS,'contact_id',contactId);
   if (!contact) throw new Error('Không tìm thấy cán bộ.');
@@ -108,7 +108,7 @@ function adminUploadAvatar(token, contactId, payload) {
   return {ok:true,contact_id:contactId,file_id:file.getId(),public_shared:shared};
 }
 
-function adminRemoveAvatar(token, contactId) {
+function adminRemoveAvatar_(token, contactId) {
   const auth = requireAdminSession_(token);
   const contact = findBy_(CONFIG.SHEETS.CONTACTS,'contact_id',contactId);
   if (!contact) throw new Error('Không tìm thấy cán bộ.');

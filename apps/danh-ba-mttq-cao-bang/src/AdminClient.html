@@ -11,7 +11,7 @@
   const show=id=>$(id).classList.remove('hidden'),hide=id=>$(id).classList.add('hidden');
 
 
-  async function login(username,password){
+  async function login_(username,password){
     const r=await rpc('login',{username,password});
     state.token=r.token;sessionStorage.setItem('mttq_admin_token',state.token);await bootstrap();
   }
@@ -256,7 +256,7 @@
 
 
 
-  $('loginForm').onsubmit=async e=>{e.preventDefault();$('loginError').textContent='';try{await login($('loginUsername').value,$('loginPassword').value)}catch(err){$('loginError').textContent=err.message||String(err)}};
+  $('loginForm').onsubmit=async e=>{e.preventDefault();$('loginError').textContent='';try{await login_($('loginUsername').value,$('loginPassword').value)}catch(err){$('loginError').textContent=err.message||String(err)}};
   $('changePasswordForm').onsubmit=async e=>{e.preventDefault();$('changePasswordError').textContent='';if($('newPassword').value!==$('confirmPassword').value){$('changePasswordError').textContent='Mật khẩu nhập lại không khớp.';return}try{await rpc('changePassword',{token:state.token,currentPassword:$('currentPassword').value,newPassword:$('newPassword').value});toast('Đổi mật khẩu thành công');await bootstrap()}catch(err){$('changePasswordError').textContent=err.message||String(err)}};
   $('logoutBtn').onclick=async()=>{try{await rpc('logout',{token:state.token})}catch(e){}sessionStorage.removeItem('mttq_admin_token');state.token='';location.reload()};
   document.querySelectorAll('.admin-nav [data-tab]').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.admin-nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.tab-pane').forEach(x=>x.classList.add('hidden'));$('tab-'+btn.dataset.tab).classList.remove('hidden')});

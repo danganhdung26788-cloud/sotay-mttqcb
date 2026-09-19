@@ -43,7 +43,7 @@ function contactValidation_(payload, excludeContactId) {
   return {full_name: fullName, phone: phone, email: email, issues: issues};
 }
 
-function listAdminContacts(token, filters) {
+function listAdminContacts_(token, filters) {
   const auth = requireAdminSession_(token);
   filters = filters || {};
   const allowed = scopedOrgIds_(auth.session);
@@ -85,7 +85,7 @@ function listAdminContacts(token, filters) {
     }));
 }
 
-function adminCreateContact(token, payload) {
+function adminCreateContact_(token, payload) {
   const auth = requireAdminSession_(token);
   payload = payload || {};
   const targetOrgId = String(payload.org_id || '');
@@ -130,7 +130,7 @@ function adminCreateContact(token, payload) {
   }
 }
 
-function adminUpdateContact(token, payload) {
+function adminUpdateContact_(token, payload) {
   const auth = requireAdminSession_(token);
   payload = payload || {};
   const current = findBy_(CONFIG.SHEETS.CONTACTS, 'contact_id', payload.contact_id);
@@ -203,7 +203,7 @@ function adminUpdateContact(token, payload) {
   }
 }
 
-function adminSetContactStatus(token, contactId, status) {
+function adminSetContactStatus_(token, contactId, status) {
   const auth = requireAdminSession_(token);
   const nextStatus = String(status || '').toUpperCase();
   if (!['ACTIVE','INACTIVE'].includes(nextStatus)) throw new Error('Trạng thái không hợp lệ.');
@@ -222,7 +222,7 @@ function adminSetContactStatus(token, contactId, status) {
   return updated;
 }
 
-function adminMoveContacts(token, contactIds, targetOrgId) {
+function adminMoveContacts_(token, contactIds, targetOrgId) {
   const auth = requireAdminSession_(token);
   contactIds = Array.isArray(contactIds) ? contactIds : [];
   if (!contactIds.length) throw new Error('Chưa chọn cán bộ.');

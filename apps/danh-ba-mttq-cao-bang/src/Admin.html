@@ -4,7 +4,7 @@
   <base target="_top">
   <meta charset="utf-8">
   <title>Quản trị - <?= appName ?></title>
-  <?!= include('AdminStyles'); ?>
+  <?!= include_('AdminStyles'); ?>
 </head>
 <body>
 <div id="loginView" class="login-page">
@@ -136,6 +136,6 @@
 
 <div id="formModal" class="modal-layer hidden"><div class="dialog wide" id="formModalBody"></div></div>
 <div id="toast" class="toast hidden"></div>
-<?!= include('AdminClient'); ?>
+<?!= include_('AdminClient'); ?>
 </body>
 </html>

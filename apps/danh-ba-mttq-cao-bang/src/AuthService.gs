@@ -12,7 +12,7 @@ function passwordDigest_(password, salt) {
 }
 
 
-function provisionAllAdminPasswords(initialPassword) {
+function provisionAllAdminPasswords_(initialPassword) {
   if (!initialPassword || String(initialPassword).length < CONFIG.AUTH.MIN_PASSWORD_LENGTH) {
     throw new Error('Mật khẩu khởi tạo không đạt yêu cầu.');
   }
@@ -35,7 +35,7 @@ function provisionAllAdminPasswords(initialPassword) {
 }
 
 
-function login(username, password) {
+function login_(username, password) {
   const uname = normalizeUsername_(username);
   const user = tableObjects_(CONFIG.SHEETS.USERS).find(
     u => normalizeUsername_(u.username) === uname
@@ -75,13 +75,13 @@ function requireSession_(token) {
 }
 
 
-function logout(token) {
+function logout_(token) {
   CacheService.getScriptCache().remove('SESSION:' + token);
   return {ok: true};
 }
 
 
-function changePassword(token, currentPassword, newPassword) {
+function changePassword_(token, currentPassword, newPassword) {
   const session = requireSession_(token);
   if (!newPassword || String(newPassword).length < CONFIG.AUTH.MIN_PASSWORD_LENGTH) {
     throw new Error('Mật khẩu mới phải có ít nhất ' + CONFIG.AUTH.MIN_PASSWORD_LENGTH + ' ký tự.');

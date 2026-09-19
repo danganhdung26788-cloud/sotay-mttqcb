@@ -43,7 +43,7 @@ function assertUniqueLevel3Name_(parentOrgId, orgName, excludeOrgId) {
   if (duplicate) throw new Error('Đơn vị cấp 3 cùng tên đã tồn tại trong xã/phường này.');
 }
 
-function getOrganizationTree(token) {
+function getOrganizationTree_(token) {
   const session = requireSession_(token);
   const orgs = tableObjects_(CONFIG.SHEETS.ORGANIZATIONS).filter(o => String(o.status) === 'ACTIVE');
   const visible = (session.role_id === 'UNIT_ADMIN' || session.role_id === 'EDITOR')
@@ -53,7 +53,7 @@ function getOrganizationTree(token) {
   return visible.sort((a,b) => Number(a.level)-Number(b.level) || Number(a.sort_order)-Number(b.sort_order));
 }
 
-function createLevel3Organization(token, parentOrgId, orgName, orgType) {
+function createLevel3Organization_(token, parentOrgId, orgName, orgType) {
   const session = requireSession_(token);
   requireLevel2Parent_(session, parentOrgId);
 
@@ -85,7 +85,7 @@ function createLevel3Organization(token, parentOrgId, orgName, orgType) {
   return org;
 }
 
-function setOrganizationStatus(token, orgId, status) {
+function setOrganizationStatus_(token, orgId, status) {
   const session = requireSession_(token);
   requireOrgWrite_(session, orgId);
   const org = findBy_(CONFIG.SHEETS.ORGANIZATIONS, 'org_id', orgId);

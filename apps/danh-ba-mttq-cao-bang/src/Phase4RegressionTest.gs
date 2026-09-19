@@ -1,4 +1,4 @@
-function runPhase4RegressionTests() {
+function runPhase4RegressionTests_() {
   const ss = db_();
   const required = Object.values(CONFIG.SHEETS);
   const missing = required.filter(n => !ss.getSheetByName(n));
@@ -50,7 +50,7 @@ function runPhase4RegressionTests() {
     checks.backup_folder_configured;
   return checks;
 }
-function runPhase4ScopeSmokeTest(token) {
+function runPhase4ScopeSmokeTest_(token) {
   const auth = requireAdminSession_(token);
   const allowed = scopedOrgIds_(auth.session);
   return {

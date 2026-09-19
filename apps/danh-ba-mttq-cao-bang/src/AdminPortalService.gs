@@ -1,14 +1,14 @@
 function bool_(v) {
   return v === true || String(v).toUpperCase() === 'TRUE' || String(v) === '1';
 }
-function adminLogin(username, password) {
+function adminLogin_(username, password) {
   const uname = normalizeUsername_(username || 'unknown');
   const key = 'LOGIN_FAIL:' + uname;
   const cache = CacheService.getScriptCache();
   const failed = Number(cache.get(key) || 0);
   if (failed >= 5) throw new Error('Tài khoản tạm khóa đăng nhập. Thử lại sau 15 phút.');
   try {
-    const result = login(username, password);
+    const result = login_(username, password);
     const user = findBy_(CONFIG.SHEETS.USERS, 'user_id', result.user.user_id);
     const session = requireSession_(result.token);
     session.password_version = passwordVersion_(user);
@@ -58,7 +58,7 @@ function scopedOrgIds_(session) {
   });
   return set;
 }
-function adminBootstrap(token) {
+function adminBootstrap_(token) {
   const auth = requireAdminSession_(token, {allowPasswordChange:true});
   const session = auth.session;
   const result = {
@@ -109,9 +109,9 @@ function adminBootstrap(token) {
   };
   return result;
 }
-function adminLogout(token) { return logout(token); }
-function adminChangePasswordPhase4(token, currentPassword, newPassword) {
-  const result = changePassword(token, currentPassword, newPassword);
+function adminLogout_(token) { return logout_(token); }
+function adminChangePasswordPhase4_(token, currentPassword, newPassword) {
+  const result = changePassword_(token, currentPassword, newPassword);
   const session = requireSession_(token);
   const user = findBy_(CONFIG.SHEETS.USERS, 'user_id', session.user_id);
   session.password_version = passwordVersion_(user);

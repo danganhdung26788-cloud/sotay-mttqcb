@@ -61,12 +61,12 @@ for (const bad of [forbiddenDefault, 'password_hash: "Mttq', "password_hash: 'Mt
 
 const requiredFunctions = [
   'doGet','publicApi','adminApi',
-  'verifyDatabase','setupDatabase','runPhase4RegressionTests','runPhase4ScopeSmokeTest',
-  'adminLogin','adminBootstrap','adminChangePasswordPhase4',
-  'adminSaveContactPhase4','adminSetContactStatusPhase4',
-  'adminUploadAvatar','adminRemoveAvatar',
-  'listReviewRequests','adminReviewRequest',
-  'adminCreateDatabaseBackup','adminPreviewRestore','adminRestoreOperationalData'
+  'verifyDatabase_','setupDatabase_','runPhase4RegressionTests_','runPhase4ScopeSmokeTest_',
+  'adminLogin_','adminBootstrap_','adminChangePasswordPhase4_',
+  'adminSaveContactPhase4_','adminSetContactStatusPhase4_',
+  'adminUploadAvatar_','adminRemoveAvatar_',
+  'listReviewRequests_','adminReviewRequest_',
+  'adminCreateDatabaseBackup_','adminPreviewRestore_','adminRestoreOperationalData_'
 ];
 for (const fn of requiredFunctions) {
   const re = new RegExp('function\\s+' + fn + '\\s*\\(');
@@ -154,6 +154,18 @@ try {
 if (!fs.existsSync(path.resolve('scripts/setup-google-auth.ps1'))) {
   console.error('MISSING_GOOGLE_AUTH_HELPER');
   failed = true;
+}
+
+const allowedPublicServerFunctions = new Set(['doGet','publicApi','adminApi']);
+for (const f of fs.readdirSync(src).filter(x => x.endsWith('.gs'))) {
+  const code = fs.readFileSync(path.join(src,f),'utf8');
+  for (const m of code.matchAll(/(?:^|\n)\s*function\s+([A-Za-z0-9_$]+)\s*\(/g)) {
+    const name = m[1];
+    if (!name.endsWith('_') && !allowedPublicServerFunctions.has(name)) {
+      console.error('UNEXPECTED_PUBLIC_SERVER_FUNCTION', f, name);
+      failed = true;
+    }
+  }
 }
 
 if (failed) {

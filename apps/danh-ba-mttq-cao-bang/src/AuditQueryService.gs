@@ -1,4 +1,4 @@
-function listAdminAudit(token, limit) {
+function listAdminAudit_(token, limit) {
   const auth=requireAdminSession_(token);
   limit=Math.min(Math.max(Number(limit||100),1),500);
   let rows=tableObjects_(CONFIG.SHEETS.AUDIT);

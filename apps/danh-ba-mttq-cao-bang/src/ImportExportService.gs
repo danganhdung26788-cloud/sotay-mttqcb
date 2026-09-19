@@ -11,7 +11,7 @@ function normalizeImportRow_(row) {
 }
 
 
-function previewImportContacts(token, targetOrgId, rows) {
+function previewImportContacts_(token, targetOrgId, rows) {
   const auth = requireAdminSession_(token);
   requireOrgWrite_(auth.session,targetOrgId);
   rows = Array.isArray(rows) ? rows : [];
@@ -36,10 +36,10 @@ function previewImportContacts(token, targetOrgId, rows) {
 }
 
 
-function commitImportContacts(token, targetOrgId, rows) {
+function commitImportContacts_(token, targetOrgId, rows) {
   const auth=requireAdminSession_(token);
   requireOrgWrite_(auth.session,targetOrgId);
-  const preview=previewImportContacts(token,targetOrgId,rows);
+  const preview=previewImportContacts_(token,targetOrgId,rows);
   const accepted=preview.filter(x=>x.accepted);
   if (!accepted.length) throw new Error('Không có dòng hợp lệ để import.');
 
@@ -87,7 +87,7 @@ function csvEscape_(value) {
 }
 
 
-function exportContactsCsv(token, orgId) {
+function exportContactsCsv_(token, orgId) {
   const auth=requireAdminSession_(token);
   const allowed=scopedOrgIds_(auth.session);
   if (orgId && !allowed.has(String(orgId))) throw new Error('Không có quyền xuất đơn vị này.');

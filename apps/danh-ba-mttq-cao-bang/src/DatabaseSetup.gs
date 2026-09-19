@@ -1,4 +1,4 @@
-function verifyDatabase() {
+function verifyDatabase_() {
   const required = Object.values(CONFIG.SHEETS);
   const ss = db_();
   const missing = required.filter(name => !ss.getSheetByName(name));
@@ -19,10 +19,10 @@ function verifyDatabase() {
 }
 
 
-function setupDatabase() {
+function setupDatabase_() {
   // Database V1.0 đã được tạo và import sẵn trên Drive.
   // Hàm này chỉ xác nhận baseline, không xóa/ghi đè dữ liệu hiện có.
-  const result = verifyDatabase();
+  const result = verifyDatabase_();
   if (!result.ok) throw new Error('Database chưa đủ schema: ' + result.missing_sheets.join(', '));
   if (result.communes !== 56) throw new Error('Số xã/phường không đúng baseline: ' + result.communes);
   if (result.commune_admins !== 56) throw new Error('Số Admin xã/phường không đúng baseline: ' + result.commune_admins);

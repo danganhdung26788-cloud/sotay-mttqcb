@@ -10,7 +10,7 @@
 - [x] Backup/restore.
 - [ ] Apps Script runtime.
 - [ ] Credential provisioning.
-- [ ] `runPhase4RegressionTests().ok === true`.
+- [ ] `runPhase4RegressionTests_().ok === true`.
 - [ ] Web App test deployment.
 - [ ] Cross-scope test với 2 Admin xã.
 - [ ] Backup runtime PASS.

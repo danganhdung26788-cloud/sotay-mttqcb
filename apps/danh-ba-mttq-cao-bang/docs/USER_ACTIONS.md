@@ -18,8 +18,8 @@ Anh chỉ cần:
 5. Nếu GitHub CLI chưa có, tạo 2 Actions Secrets theo hướng dẫn script in ra.
 
 Sau khi workflow push source PASS:
-6. Chạy `setupDatabase()`.
-7. Chạy `runPhase4RegressionTests()`.
+6. Chạy `setupDatabase_()`.
+7. Chạy `runPhase4RegressionTests_()`.
 8. Tạo Web App deployment đầu tiên và chọn phạm vi truy cập.
 9. Lưu `CLASP_DEPLOYMENT_ID`.
 

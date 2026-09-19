@@ -41,7 +41,7 @@ function queueReviewRequest_(auth, orgId, entityType, entityId, action, payload)
   return {ok:true,queued:true,request:row};
 }
 
-function adminSaveContactPhase4(token, payload) {
+function adminSaveContactPhase4_(token, payload) {
   const auth = requireAdminSession_(token);
   payload = payload || {};
   const current = payload.contact_id
@@ -71,10 +71,10 @@ function adminSaveContactPhase4(token, payload) {
     );
   }
 
-  return payload.contact_id ? adminUpdateContact(token,payload) : adminCreateContact(token,payload);
+  return payload.contact_id ? adminUpdateContact_(token,payload) : adminCreateContact_(token,payload);
 }
 
-function adminSetContactStatusPhase4(token, contactId, status, submitForReview) {
+function adminSetContactStatusPhase4_(token, contactId, status, submitForReview) {
   const auth = requireAdminSession_(token);
   const c = findBy_(CONFIG.SHEETS.CONTACTS,'contact_id',contactId);
   if (!c) throw new Error('Không tìm thấy cán bộ.');
@@ -101,10 +101,10 @@ function adminSetContactStatusPhase4(token, contactId, status, submitForReview) 
     );
   }
 
-  return adminSetContactStatus(token,contactId,nextStatus);
+  return adminSetContactStatus_(token,contactId,nextStatus);
 }
 
-function listReviewRequests(token, status) {
+function listReviewRequests_(token, status) {
   const auth = requireAdminSession_(token);
   const allowed = scopedOrgIds_(auth.session);
   let rows = tableObjects_(CONFIG.SHEETS.REVIEW_REQUESTS);
@@ -148,7 +148,7 @@ function assertReviewFresh_(req, payload) {
   }
 }
 
-function adminReviewRequest(token, requestId, decision, note) {
+function adminReviewRequest_(token, requestId, decision, note) {
   const auth = requireAdminSession_(token);
   requireProvinceAdmin_(auth.session);
 
@@ -200,11 +200,11 @@ function adminReviewRequest(token, requestId, decision, note) {
 
     let applied = null;
     if (String(req.action) === 'CREATE_CONTACT') {
-      applied = adminCreateContact(token,payload);
+      applied = adminCreateContact_(token,payload);
     } else if (String(req.action) === 'UPDATE_CONTACT') {
-      applied = adminUpdateContact(token,payload);
+      applied = adminUpdateContact_(token,payload);
     } else if (String(req.action) === 'SET_CONTACT_STATUS') {
-      applied = adminSetContactStatus(token,payload.contact_id || req.entity_id,payload.status);
+      applied = adminSetContactStatus_(token,payload.contact_id || req.entity_id,payload.status);
     } else {
       throw new Error('Action review chưa được hỗ trợ: ' + req.action);
     }

@@ -1,4 +1,4 @@
-function searchContacts(token, query, orgId) {
+function searchContacts_(token, query, orgId) {
   const session = requireSession_(token);
   const q = normalizeText_(query);
   let rows = tableObjects_(CONFIG.SHEETS.CONTACTS).filter(x => String(x.status) === 'ACTIVE');
@@ -22,7 +22,7 @@ function searchContacts(token, query, orgId) {
 }
 
 
-function createContact(token, payload) {
+function createContact_(token, payload) {
   const session = requireSession_(token);
   requireOrgWrite_(session, payload.org_id);
   const fullName = String(payload.full_name || '').trim();
