@@ -36,3 +36,21 @@ Phần “nghi thức” chỉ tạo không gian tập trung và tự suy ngẫm
 ## GitHub Pages
 
 `https://danganhdung26788-cloud.github.io/sotay-mttqcb/`
+
+
+---
+
+## Danh bạ MTTQ tỉnh Cao Bằng
+
+Repo này đồng thời lưu module Google Apps Script **Danh bạ MTTQ tỉnh Cao Bằng** tại:
+
+`apps/danh-ba-mttq-cao-bang/`
+
+Trạng thái hiện tại: **V1.1 – Phase 4 BUILD READY**.
+
+- Source runtime: `apps/danh-ba-mttq-cao-bang/src/`
+- Tài liệu triển khai: `apps/danh-ba-mttq-cao-bang/docs/DEPLOYMENT.md`
+- CI: `.github/workflows/danh-ba-ci.yml`
+- Deploy Apps Script: `.github/workflows/danh-ba-deploy.yml`
+- Source import đã được kiểm SHA-256 và validate trước khi commit.
+- Mã nguồn có thể công khai; credential Google, token OAuth, mật khẩu và GitHub Secrets tuyệt đối không commit.
