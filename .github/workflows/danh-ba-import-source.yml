@@ -4,8 +4,7 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "bootstrap/danh-ba-mttq-cao-bang-v1.1-phase4.zip"
-      - ".github/workflows/danh-ba-import-source.yml"
+      - "bootstrap/danh-ba-mttq-cao-bang/READY"
   workflow_dispatch:
 
 permissions:
@@ -22,12 +21,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Rebuild verified source package
+        shell: bash
+        run: |
+          test -f bootstrap/danh-ba-mttq-cao-bang/READY
+          test -f bootstrap/danh-ba-mttq-cao-bang/SHA256
+          cat bootstrap/danh-ba-mttq-cao-bang/chunks/*.b64 | base64 -d > /tmp/danh-ba-phase4.zip
+          echo "$(cat bootstrap/danh-ba-mttq-cao-bang/SHA256)  /tmp/danh-ba-phase4.zip" | sha256sum -c -
+
       - name: Extract source package
         shell: bash
         run: |
           rm -rf apps/danh-ba-mttq-cao-bang
           mkdir -p apps
-          unzip -q -o bootstrap/danh-ba-mttq-cao-bang-v1.1-phase4.zip -d apps
+          unzip -q -o /tmp/danh-ba-phase4.zip -d apps
           test -f apps/danh-ba-mttq-cao-bang/scripts/validate.mjs
           test -f apps/danh-ba-mttq-cao-bang/src/Code.gs
 
