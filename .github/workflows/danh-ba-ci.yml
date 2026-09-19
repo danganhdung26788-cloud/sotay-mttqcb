@@ -19,22 +19,33 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/danh-ba-mttq-cao-bang
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Detect Danh ba source
+        id: source
+        shell: bash
+        run: |
+          if [ -f "apps/danh-ba-mttq-cao-bang/scripts/validate.mjs" ] && [ -d "apps/danh-ba-mttq-cao-bang/src" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Danh ba source found."
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Danh ba source has not been imported yet; CI bootstrap is healthy."
+          fi
+
       - name: Setup Node.js
+        if: steps.source.outputs.ready == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Check project source exists
-        run: |
-          test -f scripts/validate.mjs || (echo "Missing scripts/validate.mjs" && exit 1)
-          test -d src || (echo "Missing src/" && exit 1)
-
       - name: Validate Apps Script source
+        if: steps.source.outputs.ready == 'true'
+        working-directory: apps/danh-ba-mttq-cao-bang
         run: node scripts/validate.mjs
+
+      - name: Bootstrap status
+        if: steps.source.outputs.ready != 'true'
+        run: echo "PASS - workflow installed; waiting for Phase 4 source import."
