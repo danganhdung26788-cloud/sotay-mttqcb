@@ -1,0 +1,40 @@
+name: Danh ba MTTQ - CI
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "apps/danh-ba-mttq-cao-bang/**"
+      - ".github/workflows/danh-ba-ci.yml"
+  push:
+    branches: ["main", "develop"]
+    paths:
+      - "apps/danh-ba-mttq-cao-bang/**"
+      - ".github/workflows/danh-ba-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/danh-ba-mttq-cao-bang
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check project source exists
+        run: |
+          test -f scripts/validate.mjs || (echo "Missing scripts/validate.mjs" && exit 1)
+          test -d src || (echo "Missing src/" && exit 1)
+
+      - name: Validate Apps Script source
+        run: node scripts/validate.mjs
