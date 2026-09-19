@@ -31,6 +31,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare isolated static site
+        shell: bash
+        run: |
+          rm -rf _site
+          mkdir _site
+          cp index.html app.js cards.js styles.css .nojekyll _site/
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
         with:
@@ -39,7 +46,7 @@ jobs:
       - name: Upload static site
         uses: actions/upload-pages-artifact@v4
         with:
-          path: "."
+          path: "_site"
 
       - name: Deploy
         id: deployment
