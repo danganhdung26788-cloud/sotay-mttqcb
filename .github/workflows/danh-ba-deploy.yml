@@ -20,13 +20,18 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
-    defaults:
-      run:
-        working-directory: apps/danh-ba-mttq-cao-bang
+    env:
+      CLASP_DEPLOYMENT_ID: ${{ secrets.CLASP_DEPLOYMENT_ID }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify source exists
+        shell: bash
+        run: |
+          test -f "apps/danh-ba-mttq-cao-bang/scripts/validate.mjs" || (echo "Missing Danh ba source" && exit 1)
+          test -d "apps/danh-ba-mttq-cao-bang/src" || (echo "Missing Danh ba src/" && exit 1)
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -34,36 +39,46 @@ jobs:
           node-version: "20"
 
       - name: Validate source
+        working-directory: apps/danh-ba-mttq-cao-bang
         run: node scripts/validate.mjs
 
       - name: Install clasp
+        working-directory: apps/danh-ba-mttq-cao-bang
         run: npm install --no-audit --no-fund
 
       - name: Verify required secrets
         shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
         run: |
-          test -n "${{ secrets.CLASPRC_JSON }}" || (echo "Missing CLASPRC_JSON" && exit 1)
-          test -n "${{ secrets.CLASP_JSON }}" || (echo "Missing CLASP_JSON" && exit 1)
+          test -n "$CLASPRC_JSON" || (echo "Missing CLASPRC_JSON" && exit 1)
+          test -n "$CLASP_JSON" || (echo "Missing CLASP_JSON" && exit 1)
 
       - name: Configure clasp credentials
         shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON: ${{ secrets.CLASP_JSON }}
         run: |
-          printf '%s' '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
-          printf '%s' '${{ secrets.CLASP_JSON }}' > .clasp.json
-          chmod 600 ~/.clasprc.json .clasp.json
+          printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
+          printf '%s' "$CLASP_JSON" > apps/danh-ba-mttq-cao-bang/.clasp.json
+          chmod 600 ~/.clasprc.json apps/danh-ba-mttq-cao-bang/.clasp.json
 
       - name: Push source to Apps Script
+        working-directory: apps/danh-ba-mttq-cao-bang
         run: npx clasp push -f
 
       - name: Update existing Web App deployment
-        if: ${{ secrets.CLASP_DEPLOYMENT_ID != '' }}
+        if: env.CLASP_DEPLOYMENT_ID != ''
+        working-directory: apps/danh-ba-mttq-cao-bang
         run: |
           npx clasp create-deployment \
-            --deploymentId "${{ secrets.CLASP_DEPLOYMENT_ID }}" \
+            --deploymentId "$CLASP_DEPLOYMENT_ID" \
             --description "${{ inputs.description }} | GitHub ${GITHUB_SHA}"
 
       - name: First-deployment gate
-        if: ${{ secrets.CLASP_DEPLOYMENT_ID == '' }}
+        if: env.CLASP_DEPLOYMENT_ID == ''
         run: |
           echo "Source push completed."
           echo "Create the first Web App deployment manually in Apps Script."
