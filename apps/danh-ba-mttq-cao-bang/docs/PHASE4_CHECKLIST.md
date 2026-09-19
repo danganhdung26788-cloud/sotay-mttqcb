@@ -1,17 +1,55 @@
 # Phase 4 Gate
 
+## GitHub / static gate
 - [x] Database V1.1 schema/read-back baseline.
 - [x] Source backend Phase 4.
 - [x] UI patch Phase 4.
 - [x] Static source merge.
 - [x] Session versioning code.
 - [x] Avatar MIME/size guard.
+- [x] Avatar byte-signature guard.
 - [x] Review workflow.
+- [x] Stale-review protection.
 - [x] Backup/restore.
-- [ ] Apps Script runtime.
-- [ ] Credential provisioning.
+- [x] Restore restricted to registered BACKUP_LOG entries.
+- [x] First-column/key-row handling for reads and appends.
+- [x] Public directory chunked cache.
+- [x] Level-3 hierarchy/type/status/duplicate-name validation.
+- [x] Contact target-org/group/order validation.
+- [x] Contact avatar can only be changed by AvatarService.
+- [x] Web App manifest configured.
+- [x] CI static validation.
+- [x] Internal Apps Script functions hidden with trailing `_`.
+- [x] Public server surface limited to `doGet`, `publicApi`, `adminApi`.
+- [x] Codex runtime handoff prepared in `CODEX_HANDOFF.md`.
+- [x] Codex takeover prompt prepared in `CODEX_PROMPT.md`.
+- [x] GitHub issue #4 created for runtime handoff.
+
+## Runtime gate — pending
+- [ ] Apps Script project created and linked by `scriptId`.
+- [ ] Apps Script API enabled for the deploying Google account.
+- [ ] `clasp login` OAuth completed by user.
+- [ ] `CLASPRC_JSON` and `CLASP_JSON` configured as GitHub Secrets.
+- [ ] Source push to Apps Script PASS.
+- [ ] `setupDatabase_()` PASS.
+- [ ] `verifyDatabase_()` confirms baseline.
+- [ ] Credential provisioning completed only if USERS are still `PENDING_PROVISION`.
 - [ ] `runPhase4RegressionTests_().ok === true`.
-- [ ] Web App test deployment.
-- [ ] Cross-scope test với 2 Admin xã.
-- [ ] Backup runtime PASS.
+- [ ] First Web App deployment created.
+- [ ] `CLASP_DEPLOYMENT_ID` stored as GitHub Secret.
+- [ ] Public directory runtime PASS.
+- [ ] Province admin runtime PASS.
+- [ ] At least 2 distinct UNIT_ADMIN accounts tested.
+- [ ] Cross-scope mutation denied.
+- [ ] Password reset invalidates old token.
+- [ ] Level-3 own-scope create/update/status PASS.
+- [ ] Avatar same-scope PASS / cross-scope DENIED / invalid signature DENIED.
+- [ ] Review OPTIONAL PASS.
+- [ ] Review REQUIRED PASS.
+- [ ] Stale review approval denied/error.
+- [ ] Real backup creation/read-back PASS.
+- [ ] Arbitrary non-registered restore source denied.
 - [ ] Restore-on-clone PASS.
+- [ ] Production database not used as the first restore target.
+- [ ] Web App URL/deployment reference recorded.
+- [ ] Phase status changed to RUNTIME PASS only after every runtime item above passes.
