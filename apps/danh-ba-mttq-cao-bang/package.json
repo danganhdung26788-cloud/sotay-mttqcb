@@ -1,0 +1,14 @@
+{
+  "name": "danh-ba-mttq-cao-bang",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Danh bạ MTTQ tỉnh Cao Bằng - Google Apps Script",
+  "scripts": {
+    "validate": "node scripts/validate.mjs",
+    "push": "clasp push -f",
+    "deploy": "clasp create-deployment"
+  },
+  "devDependencies": {
+    "@google/clasp": "3.4.1"
+  }
+}

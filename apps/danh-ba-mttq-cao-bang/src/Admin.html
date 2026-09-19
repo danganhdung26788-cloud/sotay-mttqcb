@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <title>Quản trị - <?= appName ?></title>
+  <?!= include('AdminStyles'); ?>
+</head>
+<body>
+<div id="loginView" class="login-page">
+  <form id="loginForm" class="login-card">
+    <div class="brand-badge">MT</div>
+    <h1>Quản trị danh bạ</h1>
+    <p>Ủy ban MTTQ Việt Nam tỉnh Cao Bằng</p>
+    <label>Tài khoản<input id="loginUsername" autocomplete="username" required placeholder="admin.caobang"></label>
+    <label>Mật khẩu<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+    <button class="primary" type="submit">Đăng nhập</button>
+    <div id="loginError" class="error-text"></div>
+  </form>
+</div>
+
+
+<div id="changePasswordView" class="modal-layer hidden">
+  <form id="changePasswordForm" class="dialog">
+    <h2>Đổi mật khẩu lần đầu</h2>
+    <p>Phải đổi mật khẩu trước khi sử dụng chức năng quản trị.</p>
+    <label>Mật khẩu hiện tại<input id="currentPassword" type="password" required></label>
+    <label>Mật khẩu mới<input id="newPassword" type="password" minlength="8" required></label>
+    <label>Nhập lại mật khẩu mới<input id="confirmPassword" type="password" minlength="8" required></label>
+    <button class="primary" type="submit">Đổi mật khẩu</button>
+    <div id="changePasswordError" class="error-text"></div>
+  </form>
+</div>
+
+
+<div id="adminView" class="admin-shell hidden">
+  <header class="admin-topbar">
+    <div><strong>Danh bạ MTTQ Cao Bằng</strong><span>Quản trị</span></div>
+    <div class="user-box"><span id="userLabel"></span><button id="logoutBtn" class="ghost">Đăng xuất</button></div>
+  </header>
+
+
+  <aside class="admin-nav">
+    <button data-tab="dashboard" class="active">Tổng quan</button>
+    <button data-tab="contacts">Cán bộ</button>
+    <button data-tab="level3">Thôn/xóm</button>
+    <button data-tab="import">Import/Export</button>
+    <button data-tab="users">Tài khoản</button>
+    <button data-tab="audit">Nhật ký</button>
+    <button id="navReview" data-tab="review">Duyệt thay đổi</button>
+    <button id="navBackup" data-tab="backup">Sao lưu</button>
+  </aside>
+
+
+  <main class="admin-main">
+    <section id="tab-dashboard" class="tab-pane"></section>
+    <section id="tab-contacts" class="tab-pane hidden">
+      <div class="pane-head"><h2>Quản lý cán bộ</h2><button id="addContactBtn" class="primary">+ Thêm cán bộ</button></div>
+      <div class="toolbar">
+        <input id="contactSearch" placeholder="Tìm tên, chức vụ, số điện thoại">
+        <select id="contactOrgFilter"></select>
+        <select id="contactStatusFilter"><option value="">Tất cả trạng thái</option><option>ACTIVE</option><option>INACTIVE</option></select>
+        <button id="refreshContactsBtn">Lọc</button>
+      </div>
+      <div class="bulkbar"><span id="selectedCount">0 đã chọn</span><select id="moveTargetOrg"></select><button id="moveBtn">Chuyển đơn vị</button></div>
+      <div class="table-wrap"><table><thead><tr><th></th><th>Họ tên</th><th>Chức vụ</th><th>Đơn vị</th><th>SĐT</th><th>Public</th><th>Chất lượng</th><th>Thao tác</th></tr></thead><tbody id="contactTbody"></tbody></table></div>
+    </section>
+
+
+    <section id="tab-level3" class="tab-pane hidden">
+      <div class="pane-head"><h2>Quản lý cấp 3</h2><button id="addLevel3Btn" class="primary">+ Thêm thôn/xóm</button></div>
+      <div id="level3List"></div>
+    </section>
+
+
+    <section id="tab-import" class="tab-pane hidden">
+      <h2>Import / Export</h2>
+      <div class="two-col">
+        <div class="panel">
+          <h3>Import CSV/TSV</h3>
+          <select id="importOrg"></select>
+          <input id="importFile" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values">
+          <p class="muted">Cột nhận diện: Họ và tên, Chức vụ, Số điện thoại, Email.</p>
+          <button id="previewImportBtn">Xem trước</button>
+          <button id="commitImportBtn" class="primary" disabled>Import</button>
+          <div id="importSummary"></div>
+          <div class="table-wrap small"><table><thead><tr><th>Dòng</th><th>Họ tên</th><th>SĐT</th><th>Lỗi/Cảnh báo</th></tr></thead><tbody id="importPreviewBody"></tbody></table></div>
+        </div>
+        <div class="panel">
+          <h3>Export CSV</h3>
+          <select id="exportOrg"></select>
+          <button id="exportBtn" class="primary">Xuất danh bạ</button>
+        </div>
+      </div>
+    </section>
+
+
+    <section id="tab-users" class="tab-pane hidden">
+      <h2>Tài khoản</h2>
+      <div class="table-wrap"><table><thead><tr><th>Username</th><th>Vai trò</th><th>Đơn vị</th><th>Trạng thái</th><th>Đổi lần đầu</th><th>Đăng nhập cuối</th><th>Thao tác</th></tr></thead><tbody id="userTbody"></tbody></table></div>
+    </section>
+
+
+    <section id="tab-audit" class="tab-pane hidden">
+      <div class="pane-head"><h2>Nhật ký hệ thống</h2><button id="refreshAuditBtn">Làm mới</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Thời gian</th><th>Người dùng</th><th>Hành động</th><th>Đối tượng</th><th>Kết quả</th></tr></thead><tbody id="auditTbody"></tbody></table></div>
+    </section>
+
+    <section id="tab-review" class="tab-pane hidden">
+      <div class="pane-head"><h2>Duyệt thay đổi</h2><button id="refreshReviewBtn">Làm mới</button></div>
+      <div class="toolbar">
+        <select id="reviewStatusFilter">
+          <option value="PENDING">Chờ duyệt</option>
+          <option value="">Tất cả</option>
+          <option value="APPROVED">Đã duyệt</option>
+          <option value="REJECTED">Từ chối</option>
+          <option value="ERROR">Lỗi</option>
+        </select>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Thời gian</th><th>Người gửi</th><th>Đơn vị</th><th>Nghiệp vụ</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+        <tbody id="reviewTbody"></tbody>
+      </table></div>
+    </section>
+    <section id="tab-backup" class="tab-pane hidden">
+      <div class="pane-head"><h2>Sao lưu dữ liệu</h2><button id="createBackupBtn" class="primary">Tạo backup</button></div>
+      <p class="muted">Restore chỉ phục hồi dữ liệu nghiệp vụ; không lùi tài khoản/mật khẩu và không xóa Audit Log.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Thời gian</th><th>Người tạo</th><th>Chế độ</th><th>Kết quả</th><th>Ghi chú</th><th>Thao tác</th></tr></thead>
+        <tbody id="backupTbody"></tbody>
+      </table></div>
+    </section>
+  </main>
+</div>
+
+
+<div id="formModal" class="modal-layer hidden"><div class="dialog wide" id="formModalBody"></div></div>
+<div id="toast" class="toast hidden"></div>
+<?!= include('AdminClient'); ?>
+</body>
+</html>

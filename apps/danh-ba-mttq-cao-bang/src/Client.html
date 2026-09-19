@@ -1,0 +1,127 @@
+<script>
+(() => {
+  const state={data:null,selectedOrgId:null,selectedGroupId:'',search:'',expanded:new Set()};
+  const $=id=>document.getElementById(id);
+  const el={tree:$('orgTree'),grid:$('contactGrid'),loading:$('loadingState'),error:$('errorState'),empty:$('emptyState'),errorMessage:$('errorMessage'),search:$('globalSearch'),clear:$('clearSearch'),title:$('currentTitle'),subtitle:$('currentSubtitle'),breadcrumb:$('breadcrumb'),groups:$('groupChips'),summary:$('resultSummary'),statUnits:$('statUnits'),statContacts:$('statContacts'),countTop:$('contactCountTop'),lastUpdated:$('lastUpdated'),sidebar:$('sidebar'),backdrop:$('sidebarBackdrop')};
+
+
+  function runServer(fn,...args){return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args))}
+  function esc(v){return String(v==null?'':v).replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]))}
+  function normalize(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().replace(/\s+/g,' ').trim()}
+  function phoneDigits(v){return String(v||'').replace(/\D/g,'')}
+  function zaloPhone(v){const p=phoneDigits(v);return p.startsWith('0')?'84'+p.slice(1):p}
+  function initials(name){const p=String(name||'').trim().split(/\s+/).filter(Boolean);return(p.slice(-2).map(x=>x[0]||'').join('')||'MT').toUpperCase()}
+  function orgById(id){return state.data.organizations.find(x=>x.org_id===id)||null}
+  function childrenOf(id){return state.data.organizations.filter(x=>x.parent_org_id===id).sort((a,b)=>a.sort_order-b.sort_order)}
+  function directCount(id){return state.data.contacts.filter(x=>x.org_id===id).length}
+
+
+  function avatarHtml(c){
+    const fallback='<div class="avatar avatar-fallback">'+esc(initials(c.full_name))+'</div>';
+    if(!c.avatar_file_id) return fallback;
+    const src='https://drive.google.com/thumbnail?id='+encodeURIComponent(c.avatar_file_id)+'&sz=w240';
+    return '<div class="avatar-box"><img class="avatar" src="'+src+'" alt="'+esc(c.full_name)+'" '+
+      'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'">'+
+      '<div class="avatar avatar-fallback" style="display:none">'+esc(initials(c.full_name))+'</div></div>';
+  }
+
+
+  function nodeHtml(org){
+    const children=childrenOf(org.org_id),expanded=state.expanded.has(org.org_id)||org.level===1,active=state.selectedOrgId===org.org_id;
+    const toggle=children.length?'<button class="tree-toggle" data-toggle="'+esc(org.org_id)+'">'+(expanded?'▾':'▸')+'</button>':'<span></span>';
+    const child=children.length&&expanded?'<div class="tree-children">'+children.map(nodeHtml).join('')+'</div>':'';
+    return '<div class="tree-node"><button class="tree-row '+(active?'active':'')+'" data-org="'+esc(org.org_id)+'">'+toggle+'<span class="tree-name">'+esc(org.org_name)+'</span><span class="tree-count">'+directCount(org.org_id)+'</span></button>'+child+'</div>';
+  }
+
+
+  function renderTree(){
+    const roots=state.data.organizations.filter(x=>!x.parent_org_id||x.level===1);
+    el.tree.innerHTML=roots.map(nodeHtml).join('');
+    el.tree.querySelectorAll('[data-org]').forEach(btn=>btn.addEventListener('click',e=>{if(e.target.closest('[data-toggle]'))return;selectOrg(btn.dataset.org)}));
+    el.tree.querySelectorAll('[data-toggle]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();const id=btn.dataset.toggle;state.expanded.has(id)?state.expanded.delete(id):state.expanded.add(id);renderTree()}));
+  }
+
+
+  function selectOrg(id){
+    state.selectedOrgId=id;state.selectedGroupId='';state.search='';el.search.value='';el.clear.classList.add('hidden');
+    const org=orgById(id);if(org)state.expanded.add(org.parent_org_id||org.org_id);
+    renderTree();renderGroups();updateHeading();renderContacts();closeSidebar();
+  }
+
+
+  function renderGroups(){
+    const groups=state.data.groups.filter(g=>g.org_id===state.selectedOrgId);
+    if(!groups.length){el.groups.innerHTML='';return}
+    el.groups.innerHTML='<button class="chip '+(!state.selectedGroupId?'active':'')+'" data-group="">Tất cả</button>'+groups.map(g=>'<button class="chip '+(state.selectedGroupId===g.group_id?'active':'')+'" data-group="'+esc(g.group_id)+'">'+esc(g.group_name)+'</button>').join('');
+    el.groups.querySelectorAll('[data-group]').forEach(btn=>btn.addEventListener('click',()=>{state.selectedGroupId=btn.dataset.group||'';renderGroups();renderContacts()}));
+  }
+
+
+  function descendantIds(id){
+    const out=new Set([id]);let changed=true;
+    while(changed){changed=false;state.data.organizations.forEach(o=>{if(out.has(o.parent_org_id)&&!out.has(o.org_id)){out.add(o.org_id);changed=true}})}
+    return out;
+  }
+
+
+  function filteredContacts(){
+    const q=normalize(state.search),qp=phoneDigits(state.search);let rows=state.data.contacts.slice();
+    if(q){rows=rows.filter(c=>[c.full_name,c.position,c.org_name,c.group_name].some(v=>normalize(v).includes(q))||(qp&&phoneDigits(c.phone).includes(qp)))}
+    else if(state.selectedOrgId){const allowed=descendantIds(state.selectedOrgId);rows=rows.filter(c=>allowed.has(c.org_id))}
+    if(state.selectedGroupId)rows=rows.filter(c=>c.group_id===state.selectedGroupId);
+    return rows.sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999)||String(a.full_name).localeCompare(String(b.full_name),'vi'));
+  }
+
+
+  function cardHtml(c){
+    const p=phoneDigits(c.phone);
+    const call=p?'<a class="action-link" href="tel:'+esc(p)+'">☎ Gọi</a>':'<span class="action-link disabled">☎ Gọi</span>';
+    const zalo=p?'<a class="action-link" target="_blank" rel="noopener" href="https://zalo.me/'+esc(zaloPhone(p))+'">Zalo</a>':'<span class="action-link disabled">Zalo</span>';
+    const mail=c.email?'<a class="action-link" href="mailto:'+esc(c.email)+'">✉ Email</a>':'<span class="action-link disabled">✉ Email</span>';
+    const unit=[c.group_name,c.org_name].filter(Boolean).join(' · ');
+    return '<article class="contact-card">'+avatarHtml(c)+'<div><div class="contact-name">'+esc(c.full_name)+'</div><div class="contact-position">'+esc(c.position||'—')+'</div><div class="contact-org">'+esc(unit)+'</div><div class="contact-phone">'+esc(c.phone||'Chưa cập nhật SĐT')+'</div></div><div class="card-actions">'+call+zalo+mail+'</div></article>';
+  }
+
+
+  function renderContacts(){
+    const rows=filteredContacts();el.loading.classList.add('hidden');el.error.classList.add('hidden');
+    if(!rows.length){el.grid.classList.add('hidden');el.empty.classList.remove('hidden')}
+    else{el.empty.classList.add('hidden');el.grid.classList.remove('hidden');el.grid.innerHTML=rows.map(cardHtml).join('')}
+    el.summary.textContent=rows.length+' kết quả'+(state.search?' cho “'+state.search+'”':'');
+  }
+
+
+  function updateHeading(){
+    const org=orgById(state.selectedOrgId);
+    if(!org){el.title.textContent='Toàn bộ danh bạ';el.subtitle.textContent='Tìm kiếm trên toàn hệ thống.';el.breadcrumb.textContent='Danh bạ';return}
+    el.title.textContent=org.org_name;const parent=orgById(org.parent_org_id);
+    el.breadcrumb.textContent=parent?parent.org_name+' / '+org.org_name:'Cấp tỉnh';
+    el.subtitle.textContent=org.level===1?'Khối cơ quan cấp tỉnh, các ban và hội quần chúng.':(org.level===2?'MTTQ cấp xã/phường và các thôn/xóm trực thuộc.':'Đơn vị cấp thôn/xóm/tổ dân phố.');
+  }
+
+
+  function openSidebar(){el.sidebar.classList.add('open');el.backdrop.classList.remove('hidden')}
+  function closeSidebar(){el.sidebar.classList.remove('open');el.backdrop.classList.add('hidden')}
+
+
+  async function load(){
+    el.loading.classList.remove('hidden');el.error.classList.add('hidden');el.grid.classList.add('hidden');
+    try{
+      const data=await runServer('publicApi','bootstrap',{});
+      state.data=data;state.selectedOrgId=data.app.root_org_id;state.expanded.add(data.app.root_org_id);
+      el.statUnits.textContent=data.organizations.length+' đơn vị';el.statContacts.textContent=data.contacts.length+' cán bộ';el.countTop.textContent=data.contacts.length+' cán bộ';el.lastUpdated.textContent=data.generated_at?'Cập nhật: '+data.generated_at:'';
+      renderTree();renderGroups();updateHeading();renderContacts();
+    }catch(err){el.loading.classList.add('hidden');el.error.classList.remove('hidden');el.errorMessage.textContent=err&&err.message?err.message:String(err||'Không xác định')}
+  }
+
+
+  el.search.addEventListener('input',()=>{state.search=el.search.value.trim();state.selectedGroupId='';el.clear.classList.toggle('hidden',!state.search);renderGroups();renderContacts();if(state.search){el.title.textContent='Kết quả tìm kiếm';el.subtitle.textContent='Tìm trên toàn bộ danh bạ MTTQ tỉnh Cao Bằng.';el.breadcrumb.textContent='Tìm kiếm'}else updateHeading()});
+  el.clear.addEventListener('click',()=>{el.search.value='';state.search='';el.clear.classList.add('hidden');updateHeading();renderContacts()});
+  document.getElementById('showAllBtn').addEventListener('click',()=>{state.selectedOrgId=null;state.selectedGroupId='';state.search='';el.search.value='';el.clear.classList.add('hidden');renderTree();renderGroups();updateHeading();renderContacts()});
+  document.getElementById('retryBtn').addEventListener('click',load);
+  document.getElementById('mobileMenuBtn').addEventListener('click',openSidebar);
+  document.getElementById('closeSidebarBtn').addEventListener('click',closeSidebar);
+  el.backdrop.addEventListener('click',closeSidebar);
+  load();
+})();
+</script>

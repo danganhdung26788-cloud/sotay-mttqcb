@@ -1,0 +1,279 @@
+<script>
+(()=>{
+  const state={token:sessionStorage.getItem('mttq_admin_token')||'',boot:null,contacts:[],level3:[],users:[],importRows:[],importPreview:[],reviewRequests:[],backups:[],selected:new Set()};
+  const $=id=>document.getElementById(id);
+  const esc=v=>String(v==null?'':v).replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+  const rpc=(action,payload={})=>new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).adminApi(action,payload));
+  const orgName=id=>{const o=(state.boot&&state.boot.organizations||[]).find(x=>x.org_id===id);return o?o.org_name:id||''};
+  const toast=msg=>{const t=$('toast');t.textContent=msg;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),2600)};
+  window.addEventListener('unhandledrejection',e=>{e.preventDefault();toast((e.reason&&e.reason.message)||String(e.reason||'Có lỗi xảy ra'))});
+  window.addEventListener('error',e=>toast(e.message||'Có lỗi xảy ra'));
+  const show=id=>$(id).classList.remove('hidden'),hide=id=>$(id).classList.add('hidden');
+
+
+  async function login(username,password){
+    const r=await rpc('login',{username,password});
+    state.token=r.token;sessionStorage.setItem('mttq_admin_token',state.token);await bootstrap();
+  }
+
+
+  async function bootstrap(){
+    if(!state.token){show('loginView');hide('adminView');return}
+    try{
+      const b=await rpc('bootstrap',{token:state.token});state.boot=b;
+      hide('loginView');
+      if(b.user.must_change_password){show('changePasswordView');hide('adminView');return}
+      hide('changePasswordView');show('adminView');
+      $('userLabel').textContent=b.user.display_name+' · '+b.user.username;
+      if($('navReview')) $('navReview').classList.toggle('hidden',!b.phase4.can_review);
+      if($('navBackup')) $('navBackup').classList.toggle('hidden',!b.phase4.can_backup);
+      fillOrgSelects();renderDashboard();await loadContacts();await loadLevel3();await loadUsers();await loadAudit();
+      if(b.phase4.can_review) await loadReviewRequests();
+      if(b.phase4.can_backup) await loadBackups();
+    }catch(e){
+      sessionStorage.removeItem('mttq_admin_token');state.token='';show('loginView');hide('adminView');
+      $('loginError').textContent=e.message||String(e);
+    }
+  }
+
+
+  function fillOrgSelects(){
+    const opts=(state.boot.organizations||[]).filter(o=>o.status==='ACTIVE').map(o=>'<option value="'+esc(o.org_id)+'">'+esc(o.org_name)+'</option>').join('');
+    ['contactOrgFilter','moveTargetOrg','importOrg','exportOrg'].forEach(id=>{const x=$(id);if(x)x.innerHTML=(id==='contactOrgFilter'?'<option value="">Tất cả đơn vị</option>':'')+opts});
+  }
+
+
+  function renderDashboard(){
+    const s=state.boot.stats||{};
+    $('tab-dashboard').innerHTML='<h2>Tổng quan</h2><div class="cards">'+
+      '<div class="stat-card"><span>Đơn vị trong phạm vi</span><strong>'+Number(s.organizations||0)+'</strong></div>'+
+      '<div class="stat-card"><span>Cấp 3 đang quản lý</span><strong>'+Number(s.level3||0)+'</strong></div>'+
+      '<div class="stat-card"><span>Cán bộ đang hoạt động</span><strong>'+Number(s.contacts||0)+'</strong></div>'+
+      '<div class="stat-card"><span>Hồ sơ cần rà</span><strong>'+Number(s.review||0)+'</strong></div></div>';
+  }
+
+
+  async function loadContacts(){
+    state.selected.clear();
+    state.contacts=await rpc('listContacts',{token:state.token,filters:{
+      query:$('contactSearch').value,org_id:$('contactOrgFilter').value,status:$('contactStatusFilter').value
+    }});
+    renderContacts();
+  }
+
+
+  function renderContacts(){
+    $('selectedCount').textContent=state.selected.size+' đã chọn';
+    $('contactTbody').innerHTML=state.contacts.map(c=>'<tr>'+
+      '<td><input type="checkbox" data-select="'+esc(c.contact_id)+'" '+(state.selected.has(c.contact_id)?'checked':'')+'></td>'+
+      '<td><strong>'+esc(c.full_name)+'</strong></td><td>'+esc(c.position)+'</td><td>'+esc(orgName(c.org_id))+'</td>'+
+      '<td>'+esc(c.phone)+'</td><td>'+(c.public_flag?'Có':'Không')+'</td>'+
+      '<td><span class="badge '+(c.data_quality==='PASS'?'pass':'review')+'">'+esc(c.data_quality)+'</span></td>'+
+      '<td><button data-edit="'+esc(c.contact_id)+'">Sửa</button> <button data-avatar="'+esc(c.contact_id)+'">Ảnh</button> <button data-status="'+esc(c.contact_id)+'" data-next="'+(c.status==='ACTIVE'?'INACTIVE':'ACTIVE')+'">'+(c.status==='ACTIVE'?'Ngừng':'Kích hoạt')+'</button></td></tr>').join('');
+    document.querySelectorAll('[data-select]').forEach(x=>x.onchange=()=>{x.checked?state.selected.add(x.dataset.select):state.selected.delete(x.dataset.select);$('selectedCount').textContent=state.selected.size+' đã chọn'});
+    document.querySelectorAll('[data-edit]').forEach(x=>x.onclick=()=>openContactForm(state.contacts.find(c=>c.contact_id===x.dataset.edit)));
+    document.querySelectorAll('[data-avatar]').forEach(x=>x.onclick=()=>openAvatarForm(state.contacts.find(c=>c.contact_id===x.dataset.avatar)));
+    document.querySelectorAll('[data-status]').forEach(x=>x.onclick=async()=>{const out=await rpc('setContactStatus',{token:state.token,contact_id:x.dataset.status,status:x.dataset.next});toast(out&&out.queued?'Đã gửi yêu cầu duyệt':'Đã cập nhật');await loadContacts();await bootstrap()});
+  }
+
+
+  function openContactForm(c){
+    c=c||{org_id:(state.boot.user.scope_org_id||''),public_flag:true,status:'ACTIVE'};
+    const orgOpts=(state.boot.organizations||[]).filter(o=>o.status==='ACTIVE').map(o=>'<option value="'+esc(o.org_id)+'" '+(o.org_id===c.org_id?'selected':'')+'>'+esc(o.org_name)+'</option>').join('');
+    const reviewMode=(state.boot.phase4&&state.boot.phase4.review_mode)||'OPTIONAL';
+    const isUnit=state.boot.user.role_id==='UNIT_ADMIN';
+    const reviewHtml=isUnit?'<label><input id="fSubmitReview" type="checkbox" '+(reviewMode==='REQUIRED'?'checked disabled':'')+'> Gửi thay đổi để Admin tỉnh duyệt</label>':'';
+    $('formModalBody').innerHTML='<h2>'+(c.contact_id?'Sửa cán bộ':'Thêm cán bộ')+'</h2><div class="form-grid">'+
+      '<label>Họ và tên<input id="fName" value="'+esc(c.full_name||'')+'"></label>'+
+      '<label>Chức vụ<input id="fPosition" value="'+esc(c.position||'')+'"></label>'+
+      '<label>Số điện thoại<input id="fPhone" value="'+esc(c.phone||'')+'"></label>'+
+      '<label>Email<input id="fEmail" value="'+esc(c.email||'')+'"></label>'+
+      '<label>Đơn vị<select id="fOrg">'+orgOpts+'</select></label>'+
+      '<label>Thứ tự<input id="fOrder" type="number" value="'+Number(c.sort_order||999)+'"></label>'+
+      '</div><label><input id="fPublic" type="checkbox" '+(c.public_flag!==false?'checked':'')+'> Hiển thị công khai</label>'+
+      reviewHtml+
+      '<div class="form-actions"><button id="cancelModal">Hủy</button><button id="saveContact" class="primary">Lưu</button></div>';
+    show('formModal');$('cancelModal').onclick=()=>hide('formModal');
+    $('saveContact').onclick=async()=>{
+      const data={
+        contact_id:c.contact_id||'',full_name:$('fName').value,position:$('fPosition').value,
+        phone:$('fPhone').value,email:$('fEmail').value,org_id:$('fOrg').value,
+        sort_order:Number($('fOrder').value||999),public_flag:$('fPublic').checked,
+        submit_for_review:$('fSubmitReview')?$('fSubmitReview').checked:false
+      };
+      const out=await rpc(c.contact_id?'updateContact':'createContact',{token:state.token,data});
+      hide('formModal');toast(out&&out.queued?'Đã gửi yêu cầu duyệt':'Đã lưu');
+      await loadContacts();await bootstrap();
+    };
+  }
+
+  function readFileAsDataUrl(file){
+    return new Promise((resolve,reject)=>{
+      const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);
+    });
+  }
+  async function prepareAvatar(file){
+    if(!file) throw new Error('Chưa chọn ảnh.');
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)) throw new Error('Chỉ nhận JPG, PNG hoặc WebP.');
+    if(file.size>2*1024*1024) throw new Error('Ảnh tối đa 2 MB.');
+    const dataUrl=await readFileAsDataUrl(file);
+    return {name:file.name,mime_type:file.type,base64:String(dataUrl).split(',')[1]||''};
+  }
+  function openAvatarForm(c){
+    $('formModalBody').innerHTML=
+      '<h2>Ảnh cán bộ</h2><p><strong>'+esc(c.full_name)+'</strong></p>'+
+      '<div class="avatar-upload-row"><input id="avatarFile" type="file" accept="image/jpeg,image/png,image/webp"></div>'+
+      '<p class="muted">JPG/PNG/WebP, tối đa 2 MB. Ảnh chỉ công khai nếu cấu hình hệ thống cho phép.</p>'+
+      '<div class="form-actions"><button id="cancelModal">Hủy</button>'+
+      (c.avatar_file_id?'<button id="removeAvatarBtn" class="danger">Bỏ ảnh</button>':'')+
+      '<button id="uploadAvatarBtn" class="primary">Tải ảnh</button></div>';
+    show('formModal');
+    $('cancelModal').onclick=()=>hide('formModal');
+    $('uploadAvatarBtn').onclick=async()=>{
+      const file=$('avatarFile').files[0];
+      const payload=await prepareAvatar(file);
+      await rpc('uploadAvatar',{token:state.token,contact_id:c.contact_id,file:payload});
+      hide('formModal');toast('Đã cập nhật ảnh');await loadContacts();
+    };
+    if($('removeAvatarBtn')) $('removeAvatarBtn').onclick=async()=>{
+      await rpc('removeAvatar',{token:state.token,contact_id:c.contact_id});
+      hide('formModal');toast('Đã bỏ ảnh khỏi hồ sơ');await loadContacts();
+    };
+  }
+
+  async function loadLevel3(){state.level3=await rpc('listLevel3',{token:state.token});renderLevel3()}
+  function renderLevel3(){
+    $('level3List').innerHTML=state.level3.length?state.level3.map(o=>'<div class="level3-item"><div><strong>'+esc(o.org_name)+'</strong><div class="muted">'+esc(orgName(o.parent_org_id))+' · '+esc(o.status)+'</div></div><div><button data-l3edit="'+esc(o.org_id)+'">Sửa</button> <button data-l3status="'+esc(o.org_id)+'" data-next="'+(o.status==='ACTIVE'?'INACTIVE':'ACTIVE')+'">'+(o.status==='ACTIVE'?'Ngừng':'Kích hoạt')+'</button></div></div>').join(''):'<div class="panel muted">Chưa có thôn/xóm/tổ dân phố.</div>';
+    document.querySelectorAll('[data-l3edit]').forEach(x=>x.onclick=()=>openLevel3Form(state.level3.find(o=>o.org_id===x.dataset.l3edit)));
+    document.querySelectorAll('[data-l3status]').forEach(x=>x.onclick=async()=>{await rpc('setLevel3Status',{token:state.token,org_id:x.dataset.l3status,status:x.dataset.next});toast('Đã cập nhật');await bootstrap()});
+  }
+
+
+  function openLevel3Form(o){
+    o=o||{};
+    const parents=(state.boot.organizations||[]).filter(x=>x.level===2&&x.status==='ACTIVE').map(x=>'<option value="'+esc(x.org_id)+'" '+(x.org_id===o.parent_org_id?'selected':'')+'>'+esc(x.org_name)+'</option>').join('');
+    $('formModalBody').innerHTML='<h2>'+(o.org_id?'Sửa cấp 3':'Thêm thôn/xóm/tổ dân phố')+'</h2>'+
+      '<label>Xã/phường<select id="l3Parent">'+parents+'</select></label><label>Tên đơn vị<input id="l3Name" value="'+esc(o.org_name||'')+'"></label>'+
+      '<label>Loại<select id="l3Type"><option value="VILLAGE">Thôn/xóm</option><option value="RESIDENTIAL_GROUP">Tổ dân phố</option></select></label>'+
+      '<label>Thứ tự<input id="l3Order" type="number" value="'+Number(o.sort_order||999)+'"></label>'+
+      '<div class="form-actions"><button id="cancelModal">Hủy</button><button id="saveL3" class="primary">Lưu</button></div>';
+    show('formModal');$('cancelModal').onclick=()=>hide('formModal');
+    $('saveL3').onclick=async()=>{const data={org_id:o.org_id||'',parent_org_id:$('l3Parent').value,org_name:$('l3Name').value,org_type:$('l3Type').value,sort_order:Number($('l3Order').value||999),status:o.status||'ACTIVE'};await rpc(o.org_id?'updateLevel3':'createLevel3',{token:state.token,data});hide('formModal');toast('Đã lưu');await bootstrap()};
+  }
+
+
+  async function loadUsers(){state.users=await rpc('listUsers',{token:state.token});renderUsers()}
+  function renderUsers(){
+    $('userTbody').innerHTML=state.users.map(u=>'<tr><td><strong>'+esc(u.username)+'</strong></td><td>'+esc(u.role_id)+'</td><td>'+esc(orgName(u.scope_org_id))+'</td><td><span class="badge '+(u.status==='ACTIVE'?'active':'locked')+'">'+esc(u.status)+'</span></td><td>'+(u.must_change_password?'Có':'Không')+'</td><td>'+esc(u.last_login||'—')+'</td><td>'+(state.boot.user.role_id==='PROVINCIAL_ADMIN'||state.boot.user.role_id==='SUPER_ADMIN'?'<button data-reset="'+esc(u.user_id)+'">Đặt lại mật khẩu</button> <button data-userstatus="'+esc(u.user_id)+'" data-next="'+(u.status==='ACTIVE'?'LOCKED':'ACTIVE')+'">'+(u.status==='ACTIVE'?'Khóa':'Mở')+'</button>':'—')+'</td></tr>').join('');
+    document.querySelectorAll('[data-reset]').forEach(x=>x.onclick=()=>openResetPassword(x.dataset.reset));
+    document.querySelectorAll('[data-userstatus]').forEach(x=>x.onclick=async()=>{await rpc('setUserStatus',{token:state.token,user_id:x.dataset.userstatus,status:x.dataset.next});toast('Đã cập nhật tài khoản');await loadUsers()});
+  }
+
+
+  function openResetPassword(userId){
+    const u=state.users.find(x=>x.user_id===userId);
+    $('formModalBody').innerHTML='<h2>Đặt lại mật khẩu</h2><p>'+esc(u.username)+'</p><label>Mật khẩu tạm<input id="tempPass" type="password" minlength="8"></label><p class="muted">Người dùng sẽ bắt buộc đổi mật khẩu ở lần đăng nhập tiếp theo.</p><div class="form-actions"><button id="cancelModal">Hủy</button><button id="doReset" class="primary">Đặt lại</button></div>';
+    show('formModal');$('cancelModal').onclick=()=>hide('formModal');$('doReset').onclick=async()=>{await rpc('resetUserPassword',{token:state.token,user_id:userId,temporary_password:$('tempPass').value});hide('formModal');toast('Đã đặt lại mật khẩu');await loadUsers()};
+  }
+
+
+  function parseDelimited(text){
+    const lines=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim()!=='');if(!lines.length)return[];
+    const delim=lines[0].includes('\t')?'\t':',';
+    const parseLine=line=>{const out=[];let cur='',q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){if(q&&line[i+1]==='"'){cur+='"';i++}else q=!q}else if(ch===delim&&!q){out.push(cur);cur=''}else cur+=ch}out.push(cur);return out};
+    const head=parseLine(lines[0]).map(x=>x.trim());
+    return lines.slice(1).map(line=>{const cells=parseLine(line),o={};head.forEach((h,i)=>o[h]=cells[i]||'');return o});
+  }
+
+
+  async function loadImportFile(){const f=$('importFile').files[0];if(!f)throw new Error('Chưa chọn file.');state.importRows=parseDelimited(await f.text());return state.importRows}
+
+
+  async function previewImport(){
+    await loadImportFile();state.importPreview=await rpc('previewImport',{token:state.token,target_org_id:$('importOrg').value,rows:state.importRows});
+    $('importPreviewBody').innerHTML=state.importPreview.map(x=>'<tr><td>'+x.row+'</td><td>'+esc(x.data.full_name)+'</td><td>'+esc(x.data.phone)+'</td><td>'+esc(x.issues.join(', '))+'</td></tr>').join('');
+    const ok=state.importPreview.filter(x=>x.accepted).length;$('importSummary').textContent=ok+'/'+state.importPreview.length+' dòng có thể import';$('commitImportBtn').disabled=!ok;
+  }
+
+
+  async function exportCsv(){
+    const r=await rpc('exportCsv',{token:state.token,org_id:$('exportOrg').value});
+    const blob=new Blob([r.content],{type:r.mime_type});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=r.file_name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  }
+
+
+  async function loadAudit(){const rows=await rpc('listAudit',{token:state.token,limit:200});$('auditTbody').innerHTML=rows.map(a=>'<tr><td>'+esc(a.timestamp)+'</td><td>'+esc(a.actor)+'</td><td>'+esc(a.action)+'</td><td>'+esc(a.entity_type)+' '+esc(a.entity_id)+'</td><td>'+esc(a.result)+'</td></tr>').join('')}
+
+  async function loadReviewRequests(){
+    if(!(state.boot.phase4&&state.boot.phase4.can_review)) return;
+    state.reviewRequests=await rpc('listReviewRequests',{
+      token:state.token,status:$('reviewStatusFilter')?$('reviewStatusFilter').value:'PENDING'
+    });
+    renderReviewRequests();
+  }
+  function renderReviewRequests(){
+    if(!$('reviewTbody')) return;
+    $('reviewTbody').innerHTML=state.reviewRequests.map(r=>
+      '<tr><td>'+esc(r.timestamp)+'</td><td>'+esc(r.actor)+'</td><td>'+esc(orgName(r.org_id))+'</td>'+
+      '<td>'+esc(r.action)+'</td><td>'+esc(r.status)+'</td><td>'+
+      (r.status==='PENDING'?'<div class="review-actions"><button data-approve="'+esc(r.request_id)+'">Duyệt</button>'+
+      '<button class="danger" data-reject="'+esc(r.request_id)+'">Từ chối</button></div>':'—')+
+      '</td></tr>').join('');
+    document.querySelectorAll('[data-approve]').forEach(x=>x.onclick=()=>reviewOne(x.dataset.approve,'APPROVE'));
+    document.querySelectorAll('[data-reject]').forEach(x=>x.onclick=()=>reviewOne(x.dataset.reject,'REJECT'));
+  }
+  async function reviewOne(id,decision){
+    const note=prompt(decision==='APPROVE'?'Ghi chú duyệt (không bắt buộc)':'Lý do từ chối:')||'';
+    if(decision==='REJECT'&&!note.trim()) throw new Error('Cần nhập lý do từ chối.');
+    await rpc('reviewRequest',{token:state.token,request_id:id,decision,note});
+    toast(decision==='APPROVE'?'Đã duyệt':'Đã từ chối');
+    await loadReviewRequests();await loadContacts();await bootstrap();
+  }
+
+  async function loadBackups(){
+    if(!(state.boot.phase4&&state.boot.phase4.can_backup)) return;
+    state.backups=await rpc('listBackups',{token:state.token,limit:100});
+    renderBackups();
+  }
+  function renderBackups(){
+    if(!$('backupTbody')) return;
+    $('backupTbody').innerHTML=state.backups.map(b=>
+      '<tr><td>'+esc(b.timestamp)+'</td><td>'+esc(b.actor)+'</td><td>'+esc(b.mode)+'</td>'+
+      '<td>'+esc(b.result)+'</td><td>'+esc(b.note||'')+'</td><td>'+
+      (b.backup_file_id?'<button data-restore="'+esc(b.backup_file_id)+'">Kiểm tra/Khôi phục</button>':'—')+
+      '</td></tr>').join('');
+    document.querySelectorAll('[data-restore]').forEach(x=>x.onclick=()=>openRestore(x.dataset.restore));
+  }
+  async function openRestore(fileId){
+    const p=await rpc('previewRestore',{token:state.token,backup_file_id:fileId});
+    if(!p.ok) throw new Error('Backup không đủ schema.');
+    const confirmText=prompt('Backup: '+p.title+'\nNhập RESTORE_OPERATIONAL_DATA để xác nhận khôi phục dữ liệu nghiệp vụ.');
+    if(confirmText!=='RESTORE_OPERATIONAL_DATA') return;
+    await rpc('restoreOperationalData',{token:state.token,backup_file_id:fileId,confirmation:confirmText});
+    toast('Đã khôi phục dữ liệu. Hệ thống đã tự tạo backup an toàn trước restore.');
+    await bootstrap();await loadBackups();
+  }
+
+
+
+  $('loginForm').onsubmit=async e=>{e.preventDefault();$('loginError').textContent='';try{await login($('loginUsername').value,$('loginPassword').value)}catch(err){$('loginError').textContent=err.message||String(err)}};
+  $('changePasswordForm').onsubmit=async e=>{e.preventDefault();$('changePasswordError').textContent='';if($('newPassword').value!==$('confirmPassword').value){$('changePasswordError').textContent='Mật khẩu nhập lại không khớp.';return}try{await rpc('changePassword',{token:state.token,currentPassword:$('currentPassword').value,newPassword:$('newPassword').value});toast('Đổi mật khẩu thành công');await bootstrap()}catch(err){$('changePasswordError').textContent=err.message||String(err)}};
+  $('logoutBtn').onclick=async()=>{try{await rpc('logout',{token:state.token})}catch(e){}sessionStorage.removeItem('mttq_admin_token');state.token='';location.reload()};
+  document.querySelectorAll('.admin-nav [data-tab]').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.admin-nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.tab-pane').forEach(x=>x.classList.add('hidden'));$('tab-'+btn.dataset.tab).classList.remove('hidden')});
+  $('addContactBtn').onclick=()=>openContactForm(null);$('refreshContactsBtn').onclick=loadContacts;
+  $('moveBtn').onclick=async()=>{if(!state.selected.size)return toast('Chưa chọn cán bộ');await rpc('moveContacts',{token:state.token,contact_ids:Array.from(state.selected),target_org_id:$('moveTargetOrg').value});toast('Đã chuyển đơn vị');await loadContacts()};
+  $('addLevel3Btn').onclick=()=>openLevel3Form(null);
+  $('previewImportBtn').onclick=()=>previewImport().catch(e=>toast(e.message||String(e)));
+  $('commitImportBtn').onclick=async()=>{const r=await rpc('commitImport',{token:state.token,target_org_id:$('importOrg').value,rows:state.importRows});toast('Import '+r.total+' dòng');$('commitImportBtn').disabled=true;await bootstrap()};
+  $('exportBtn').onclick=()=>exportCsv().catch(e=>toast(e.message||String(e)));
+  $('refreshAuditBtn').onclick=loadAudit;
+  if($('refreshReviewBtn')) $('refreshReviewBtn').onclick=loadReviewRequests;
+  if($('reviewStatusFilter')) $('reviewStatusFilter').onchange=loadReviewRequests;
+  if($('createBackupBtn')) $('createBackupBtn').onclick=async()=>{
+    const note=prompt('Ghi chú cho bản backup:')||'';
+    await rpc('createBackup',{token:state.token,note});
+    toast('Đã tạo backup');await loadBackups();
+  };
+  bootstrap();
+})();
+</script>
