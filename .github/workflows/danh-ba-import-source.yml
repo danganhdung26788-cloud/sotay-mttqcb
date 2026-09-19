@@ -39,7 +39,8 @@ jobs:
           test -f apps/danh-ba-mttq-cao-bang/src/Code.gs
 
       - name: Validate extracted source
-        run: node apps/danh-ba-mttq-cao-bang/scripts/validate.mjs
+        working-directory: apps/danh-ba-mttq-cao-bang
+        run: node scripts/validate.mjs
 
       - name: Commit extracted source
         shell: bash
