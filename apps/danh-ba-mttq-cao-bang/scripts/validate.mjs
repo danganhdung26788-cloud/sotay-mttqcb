@@ -52,7 +52,7 @@ const sourceFiles = fs.readdirSync(src).filter(f => /\.(gs|html|json)$/.test(f))
 const all = sourceFiles.map(f => fs.readFileSync(path.join(src,f),'utf8')).join('\n');
 
 const forbiddenDefault = ['Mttq','@123'].join('');
-for (const bad of [forbiddenDefault,'password_hash: \"Mttq',\"password_hash: 'Mttq\"]) {
+for (const bad of [forbiddenDefault, 'password_hash: "Mttq', "password_hash: 'Mttq"]) {
   if (all.includes(bad)) {
     console.error('FORBIDDEN_SECRET_PATTERN', bad);
     failed = true;
