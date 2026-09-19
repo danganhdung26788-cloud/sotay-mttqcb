@@ -89,3 +89,9 @@ if (!fs.existsSync(path.resolve('scripts/setup-google-auth.ps1'))) {
 
 if (failed) process.exit(1);
 console.log('PASS: structure + JS syntax + secret guard + manifest + clasp deploy guard');
+
+// Phase 4 deployment manifest gate
+const manifest = JSON.parse(fs.readFileSync(path.join(src,'appsscript.json'),'utf8'));
+if (!manifest.webapp || manifest.webapp.access !== 'ANYONE_ANONYMOUS' || manifest.webapp.executeAs !== 'USER_DEPLOYING') {
+  console.error('WEBAPP_MANIFEST_MISMATCH'); failed = true;
+}
