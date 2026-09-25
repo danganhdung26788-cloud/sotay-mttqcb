@@ -9,7 +9,7 @@ const required = [
   'PublicDirectoryService.gs','ViewHelpers.gs','AdminPortalService.gs','ContactAdminService.gs',
   'OrganizationAdminService.gs','UserAdminService.gs','ImportExportService.gs','ImportPhase4Service.gs',
   'AuditQueryService.gs','AvatarService.gs','ReviewWorkflowService.gs','BackupService.gs',
-  'Phase4RegressionTest.gs','RuntimeGateConfig.gs','RuntimeGateService.gs','Code.gs','Index.html','Styles.html','Client.html','Admin.html',
+  'Phase4RegressionTest.gs','CredentialProvisionService.gs','RuntimeGateConfig.gs','RuntimeGateService.gs','Code.gs','Index.html','Styles.html','Client.html','Admin.html',
   'AdminStyles.html','AdminClient.html','appsscript.json'
 ];
 
@@ -67,7 +67,7 @@ const requiredFunctions = [
   'adminUploadAvatar_','adminRemoveAvatar_',
   'listReviewRequests_','adminReviewRequest_',
   'adminCreateDatabaseBackup_','adminPreviewRestore_','adminRestoreOperationalData_',
-  'runtimeGateResponse_','runRuntimeBaselineGate_'
+  'runtimeGateResponse_','runRuntimeBaselineGate_','runtimeProvisionPendingCredentials_','provisionPendingCredentials_'
 ];
 for (const fn of requiredFunctions) {
   const re = new RegExp('function\\s+' + fn + '\\s*\\(');
