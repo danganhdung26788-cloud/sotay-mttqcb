@@ -1,26 +1,24 @@
 # Việc người dùng cần thao tác/cấp quyền
 
-Source/GitHub/CI đã được AI chuẩn bị. Phần còn lại chỉ là các thao tác xác thực Google mà connector hiện tại không thể thay thế.
+OAuth/clasp ban đầu đã hoàn thành và GitHub đã có `CLASPRC_JSON` + `CLASP_JSON`.
 
-## Cách ngắn nhất
+## Trạng thái vận hành bình thường
 
-Từ thư mục gốc repo trên máy Windows, chạy:
+Người dùng **không cần**:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\apps\danh-ba-mttq-cao-bang\scripts\setup-google-auth.ps1
-```
+- mở Apps Script Editor để chạy `setupDatabase_()` / `verifyDatabase_()` / regression;
+- chạy `clasp push` thủ công;
+- tạo Web App deployment đầu tiên bằng UI;
+- copy Deployment ID sang GitHub Secret;
+- tự kiểm tra credential bằng wrapper tạm.
 
-Anh chỉ cần:
-1. Bật Apps Script API khi trình duyệt được mở.
-2. Tạo project **Danh bạ MTTQ tỉnh Cao Bằng**.
-3. Copy/paste `Script ID` vào PowerShell.
-4. Xác nhận OAuth khi `clasp login` mở trình duyệt.
-5. Nếu GitHub CLI chưa có, tạo 2 Actions Secrets theo hướng dẫn script in ra.
+Workflow Phase 4A tự xử lý các bước trên và chỉ trả một trong ba trạng thái: `PASS / REVIEW / BLOCKED`.
 
-Sau khi workflow push source PASS:
-6. Chạy `setupDatabase_()`.
-7. Chạy `runPhase4RegressionTests_()`.
-8. Tạo Web App deployment đầu tiên và chọn phạm vi truy cập.
-9. Lưu `CLASP_DEPLOYMENT_ID`.
+## Chỉ cần người dùng khi thật sự có REVIEW
+
+1. Google yêu cầu OAuth/consent lại.
+2. Credential còn `PENDING_PROVISION` và cần quyết định mật khẩu khởi tạo an toàn.
+3. Baseline dữ liệu lệch bất thường cần quyết định nghiệp vụ.
+4. Một acceptance mutation có rủi ro không thể rollback tự động.
 
 Không gửi hoặc commit mật khẩu quản trị, refresh token, `.clasprc.json`, private key hoặc OAuth client secret.
