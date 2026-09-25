@@ -1,6 +1,6 @@
 # CODEX HANDOFF — Danh bạ MTTQ tỉnh Cao Bằng
 
-> **Phase 4A/4B update:** runtime baseline, credential bootstrap và deployment are automated by `.github/workflows/danh-ba-deploy.yml`. Do not reintroduce manual wrappers, a shared initial password, first-deployment UI steps, or `CLASP_DEPLOYMENT_ID`. Plaintext temporary passwords must never appear in GitHub logs/chat/repo; they are written only to a newly-created owner-private Drive handoff file.
+> **Phase 4A/4B/4C update:** runtime baseline, credential bootstrap, clone-only acceptance và deployment are automated by `.github/workflows/danh-ba-deploy.yml`. Do not reintroduce manual wrappers, shared initial passwords, manual acceptance mutations, first-deployment UI steps, or `CLASP_DEPLOYMENT_ID`. Plaintext temporary passwords must never appear in GitHub logs/chat/repo.
 
 ## Mục tiêu
 Hoàn tất **Phase 4 runtime gate** và triển khai Google Apps Script Web App từ source đã chuẩn hóa trên GitHub.
@@ -131,7 +131,7 @@ The Phase 4A workflow automatically creates the first versioned Web App deployme
 No manual `CLASP_DEPLOYMENT_ID` secret is required. Do not expose OAuth credentials.
 
 ## Step 7 — Runtime acceptance
-Test public directory and admin portal.
+Phase 4C executes the acceptance matrix automatically through a one-time secured runtime-gate deployment. It creates a private clone of the production database and redirects all acceptance mutations, backup and restore operations to that clone. Production receives only the final clean-source deployment and smoke/read-only checks.
 
 Required acceptance:
 1. Public directory loads.
@@ -153,6 +153,8 @@ Required acceptance:
 17. Restore preview rejects arbitrary non-registered Spreadsheet IDs.
 18. Restore test is performed **only on clone/test DB**, never first on production.
 19. After restore-on-clone, baseline and audit expectations remain correct.
+
+The workflow must clean up the test clone/folder before production deployment. If any acceptance item fails, production deployment is not updated.
 
 ## Step 8 — Finalize
 When all runtime gates pass:
