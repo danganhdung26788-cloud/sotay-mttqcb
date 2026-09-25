@@ -13,6 +13,7 @@ Production read-back:
 - 57 tài khoản, trong đó 56 `UNIT_ADMIN`.
 - 57/57 tài khoản `PROVISIONED`; buộc đổi mật khẩu lần đầu.
 - Phase 4A/4B/4C runtime gates và clone-only acceptance: PASS.
+- Public UI V2 production: PASS — giao diện gọn, search trọng tâm, sidebar thu gọn, filter nhóm, thẻ 4 cột, chế độ danh sách và responsive mobile/tablet.
 
 Database vận hành: `1E1pOxwBiQI4GDehXrYYghwULUg6pGZhbILXEOs-vIcY`.
 
