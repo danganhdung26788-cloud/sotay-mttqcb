@@ -27,10 +27,11 @@ function runtimeCredentialState_() {
   const pending = active.filter(u => String(u.credential_state || '') === 'PENDING_PROVISION');
   const provisioned = active.filter(u => String(u.credential_state || '') === 'PROVISIONED');
   const emptyHashes = active.filter(u => !String(u.password_hash || '').trim());
+  const emptySalts = active.filter(u => !String(u.password_salt || '').trim());
   const mustChange = active.filter(u => bool_(u.must_change_password));
 
   let state = 'PASS';
-  if (pending.length || emptyHashes.length) state = 'ACTION_REQUIRED';
+  if (pending.length || emptyHashes.length || emptySalts.length) state = 'ACTION_REQUIRED';
 
   return {
     credential_state: state,
@@ -39,6 +40,7 @@ function runtimeCredentialState_() {
     provisioned_count: provisioned.length,
     pending_provision_count: pending.length,
     empty_password_hashes: emptyHashes.length,
+    empty_password_salts: emptySalts.length,
     must_change_password_count: mustChange.length
   };
 }
@@ -73,10 +75,36 @@ function runRuntimeBaselineGate_(token) {
   };
 }
 
+function runtimeProvisionPendingCredentials_(token) {
+  requireRuntimeGateToken_(token);
+  const before = runtimeCredentialState_();
+  if (before.credential_state === 'PASS') {
+    return {
+      ok:true,
+      gate:'PASS',
+      provision:{ok:true,count:0,no_change:true,credential_state:'PROVISIONED'},
+      credentials:before
+    };
+  }
+
+  const provision = provisionPendingCredentials_();
+  const after = runtimeCredentialState_();
+  return {
+    ok:after.credential_state === 'PASS',
+    gate:after.credential_state === 'PASS' ? 'PASS' : 'BLOCKED',
+    provision:provision,
+    credentials:after
+  };
+}
+
 function runtimeGateResponse_(e) {
   try {
     const token = String((e && e.parameter && e.parameter.token) || '');
-    const result = runRuntimeBaselineGate_(token);
+    const mode = String((e && e.parameter && e.parameter.mode) || 'baseline').toLowerCase();
+    const result = mode === 'provision'
+      ? runtimeProvisionPendingCredentials_(token)
+      : runRuntimeBaselineGate_(token);
+
     return ContentService
       .createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
