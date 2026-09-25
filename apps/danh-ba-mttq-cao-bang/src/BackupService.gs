@@ -4,7 +4,7 @@ function backupLog_(actor, mode, backupFile, result, note) {
     timestamp:nowIso_(),
     actor:actor || 'SYSTEM',
     mode:mode || 'MANUAL',
-    source_db_id:CONFIG.DB_ID,
+    source_db_id:activeDbId_(),
     backup_file_id:backupFile ? backupFile.getId() : '',
     backup_url:backupFile ? backupFile.getUrl() : '',
     result:result || 'PASS',
@@ -19,7 +19,7 @@ function createDatabaseBackupInternal_(actor, note, mode) {
   const root = DriveApp.getFolderById(rootId);
   const stamp = Utilities.formatDate(new Date(),'Asia/Ho_Chi_Minh','yyyyMMdd_HHmmss');
   const folder = root.createFolder('DB_BACKUP_' + stamp);
-  const src = DriveApp.getFileById(CONFIG.DB_ID);
+  const src = DriveApp.getFileById(activeDbId_());
   const copy = src.makeCopy('DATABASE_DANH_BA_MTTQ_' + stamp,folder);
 
   backupLog_(actor,mode || 'MANUAL',copy,'PASS',note || '');
@@ -64,7 +64,7 @@ function registeredBackup_(backupFileId) {
 
   const row = tableObjects_(CONFIG.SHEETS.BACKUP_LOG).find(r =>
     String(r.backup_file_id || '') === id &&
-    String(r.source_db_id || '') === String(CONFIG.DB_ID) &&
+    String(r.source_db_id || '') === String(activeDbId_()) &&
     String(r.result || '') === 'PASS'
   );
 
