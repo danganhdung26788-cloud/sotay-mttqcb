@@ -1,6 +1,6 @@
 # CODEX HANDOFF — Danh bạ MTTQ tỉnh Cao Bằng
 
-> **Phase 4A update:** runtime baseline/deployment is now automated by `.github/workflows/danh-ba-deploy.yml`. Do not reintroduce manual wrapper execution, first-deployment UI steps, or `CLASP_DEPLOYMENT_ID` as a required secret. The workflow must return `PASS / REVIEW / BLOCKED` and fail closed on unexpected baseline/runtime errors.
+> **Phase 4A/4B update:** runtime baseline, credential bootstrap và deployment are automated by `.github/workflows/danh-ba-deploy.yml`. Do not reintroduce manual wrappers, a shared initial password, first-deployment UI steps, or `CLASP_DEPLOYMENT_ID`. Plaintext temporary passwords must never appear in GitHub logs/chat/repo; they are written only to a newly-created owner-private Drive handoff file.
 
 ## Mục tiêu
 Hoàn tất **Phase 4 runtime gate** và triển khai Google Apps Script Web App từ source đã chuẩn hóa trên GitHub.
@@ -119,11 +119,11 @@ Expected baseline:
 If any baseline count differs before deliberate test mutations, STOP and investigate.
 
 ## Step 5 — Provision credentials
-Only if USERS are still `PENDING_PROVISION`.
+Only if USERS are still `PENDING_PROVISION` or password hash/salt is empty.
 
-Run the private provisioning function from Apps Script editor and let the user type/provide the temporary password locally. Never put the password in GitHub, issue comments, logs, or chat.
+The secured Phase 4B runtime gate provisions only affected ACTIVE users automatically. Each user receives a unique temporary password. The app stores only the derived hash/salt in USERS and keeps `must_change_password=TRUE`.
 
-All accounts must require password change on first login.
+Plaintext temporary passwords are written only to a newly-created CSV in the deploying account's My Drive root. Before updating USERS, the runtime verifies the file is `PRIVATE` and has no additional viewers/editors. On failure, it rolls back applied user rows and trashes the handoff file. Never put temporary passwords in GitHub, issue comments, logs, repository files, or chat.
 
 ## Step 6 — Web App deployment
 The Phase 4A workflow automatically creates the first versioned Web App deployment when runtime gate is PASS. On later runs it discovers the existing production deployment by the `DANH_BA_PRODUCTION` marker and updates it in place.
