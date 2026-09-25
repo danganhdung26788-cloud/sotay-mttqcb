@@ -4,7 +4,10 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "apps/danh-ba-mttq-cao-bang/**"
+      - "apps/danh-ba-mttq-cao-bang/src/**"
+      - "apps/danh-ba-mttq-cao-bang/scripts/**"
+      - "apps/danh-ba-mttq-cao-bang/package.json"
+      - "apps/danh-ba-mttq-cao-bang/.claspignore"
       - ".github/workflows/danh-ba-deploy.yml"
   workflow_dispatch:
     inputs:
@@ -135,11 +138,12 @@ jobs:
           fi
 
       - name: Upload runtime gate evidence
-        if: always() && hashFiles('/tmp/runtime-gate-result.json') != ''
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: danh-ba-runtime-gate-${{ github.run_id }}
           path: /tmp/runtime-gate-result.json
+          if-no-files-found: ignore
           retention-days: 30
 
       - name: Remove temporary deployment
