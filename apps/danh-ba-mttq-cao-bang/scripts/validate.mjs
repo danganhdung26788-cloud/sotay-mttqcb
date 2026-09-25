@@ -165,6 +165,21 @@ if (!runtimeGateConfig.includes("__RUNTIME_GATE_TOKEN_SHA256__")) {
   console.error('RUNTIME_GATE_CONFIG_MUST_BE_DISABLED_IN_REPO');
   failed = true;
 }
+const publicIndex = fs.readFileSync(path.join(src,'Index.html'),'utf8');
+for (const token of ['?view=admin','levelFilter','positionFilter','resetFiltersBtn']) {
+  if (!publicIndex.includes(token)) {
+    console.error('PUBLIC_UI_FILTER_OR_ADMIN_ENTRY_MISSING', token);
+    failed = true;
+  }
+}
+const adminIndex = fs.readFileSync(path.join(src,'Admin.html'),'utf8');
+for (const token of ['data-tab="groups"','groupTbody','addGroupBtn']) {
+  if (!adminIndex.includes(token)) {
+    console.error('ADMIN_GROUP_UI_MISSING', token);
+    failed = true;
+  }
+}
+
 const codeEntry = fs.readFileSync(path.join(src,'Code.gs'),'utf8');
 if (!codeEntry.includes("view === '__runtime_gate'") || !codeEntry.includes('runtimeGateResponse_(e)')) {
   console.error('RUNTIME_GATE_ROUTE_MISSING');
