@@ -11,7 +11,9 @@ Người dùng **không cần**:
 - tạo Web App deployment đầu tiên bằng UI;
 - copy Deployment ID sang GitHub Secret;
 - tự kiểm tra credential bằng wrapper;
-- tự đặt một mật khẩu khởi tạo chung cho 57 tài khoản.
+- tự đặt một mật khẩu khởi tạo chung cho 57 tài khoản;
+- tự đăng nhập thử 3 tài khoản để nghiệm thu scope/CRUD/review/avatar;
+- tự tạo database clone hoặc chạy restore thử.
 
 Workflow tự bootstrap các tài khoản còn `PENDING_PROVISION` bằng mật khẩu tạm riêng từng tài khoản. Plaintext không đi qua GitHub log/chat; một file CSV bàn giao riêng tư được tạo trong My Drive của tài khoản triển khai và tên file được ghi vào workflow summary.
 
@@ -19,7 +21,7 @@ Workflow tự bootstrap các tài khoản còn `PENDING_PROVISION` bằng mật 
 
 1. Google yêu cầu OAuth/consent lại.
 2. Cần lấy file `DANH_BA_CREDENTIAL_HANDOFF_*.csv` trong My Drive để bàn giao mật khẩu tạm cho đúng đơn vị; các tài khoản buộc đổi mật khẩu ở lần đăng nhập đầu.
-3. Baseline dữ liệu lệch bất thường cần quyết định nghiệp vụ.
-4. Một acceptance mutation có rủi ro không thể rollback tự động.
+3. Baseline hoặc acceptance phát hiện BLOCKED cần quyết định nghiệp vụ.
+4. Một thay đổi production có rủi ro không thể rollback tự động.
 
 Không gửi hoặc commit mật khẩu quản trị, refresh token, `.clasprc.json`, private key hoặc OAuth client secret.
