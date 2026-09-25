@@ -14,6 +14,8 @@ Production read-back:
 - 57/57 tài khoản `PROVISIONED`; buộc đổi mật khẩu lần đầu.
 - Phase 4A/4B/4C runtime gates và clone-only acceptance: PASS.
 - Public UI V2 production: PASS — giao diện gọn, search trọng tâm, sidebar thu gọn, filter nhóm, thẻ 4 cột, chế độ danh sách và responsive mobile/tablet.
+- Quản trị Ban/Nhóm/Hội: PASS — CRUD theo scope, gán cán bộ vào nhóm, chặn cross-scope và chặn ngừng nhóm còn cán bộ hoạt động.
+- Public filter: PASS — lọc theo Cấp tỉnh/Xã-phường/Cấp 3 và Chức vụ.
 
 Database vận hành: `1E1pOxwBiQI4GDehXrYYghwULUg6pGZhbILXEOs-vIcY`.
 
