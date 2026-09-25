@@ -1,10 +1,12 @@
 <script>
 (()=>{
-  const state={token:sessionStorage.getItem('mttq_admin_token')||'',boot:null,contacts:[],level3:[],users:[],importRows:[],importPreview:[],reviewRequests:[],backups:[],selected:new Set()};
+  const state={token:sessionStorage.getItem('mttq_admin_token')||'',boot:null,contacts:[],groupsAdmin:[],level3:[],users:[],importRows:[],importPreview:[],reviewRequests:[],backups:[],selected:new Set()};
   const $=id=>document.getElementById(id);
   const esc=v=>String(v==null?'':v).replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
   const rpc=(action,payload={})=>new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).adminApi(action,payload));
   const orgName=id=>{const o=(state.boot&&state.boot.organizations||[]).find(x=>x.org_id===id);return o?o.org_name:id||''};
+  const groupName=id=>{const g=(state.boot&&state.boot.groups||[]).find(x=>x.group_id===id)||state.groupsAdmin.find(x=>x.group_id===id);return g?g.group_name:(id||'')};
+  const groupTypeLabel=t=>({PROVINCE_DEPARTMENT:'Ban/Bộ phận cấp tỉnh',ASSOCIATION:'Hội/Tổ chức',COMMUNE_GROUP:'Ban/Bộ phận cấp xã',LEVEL3_GROUP:'Nhóm/Bộ phận cấp 3',OTHER:'Khác'}[String(t||'')]||String(t||''));
   const toast=msg=>{const t=$('toast');t.textContent=msg;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),2600)};
   window.addEventListener('unhandledrejection',e=>{e.preventDefault();toast((e.reason&&e.reason.message)||String(e.reason||'Có lỗi xảy ra'))});
   window.addEventListener('error',e=>toast(e.message||'Có lỗi xảy ra'));
@@ -27,7 +29,7 @@
       $('userLabel').textContent=b.user.display_name+' · '+b.user.username;
       if($('navReview')) $('navReview').classList.toggle('hidden',!b.phase4.can_review);
       if($('navBackup')) $('navBackup').classList.toggle('hidden',!b.phase4.can_backup);
-      fillOrgSelects();renderDashboard();await loadContacts();await loadLevel3();await loadUsers();await loadAudit();
+      fillOrgSelects();renderDashboard();await loadContacts();await loadGroups();await loadLevel3();await loadUsers();await loadAudit();
       if(b.phase4.can_review) await loadReviewRequests();
       if(b.phase4.can_backup) await loadBackups();
     }catch(e){
@@ -39,7 +41,11 @@
 
   function fillOrgSelects(){
     const opts=(state.boot.organizations||[]).filter(o=>o.status==='ACTIVE').map(o=>'<option value="'+esc(o.org_id)+'">'+esc(o.org_name)+'</option>').join('');
-    ['contactOrgFilter','moveTargetOrg','importOrg','exportOrg'].forEach(id=>{const x=$(id);if(x)x.innerHTML=(id==='contactOrgFilter'?'<option value="">Tất cả đơn vị</option>':'')+opts});
+    ['contactOrgFilter','moveTargetOrg','importOrg','exportOrg','groupOrgFilter'].forEach(id=>{
+      const x=$(id);if(!x)return;
+      const allOption=(id==='contactOrgFilter'||id==='groupOrgFilter')?'<option value="">Tất cả đơn vị</option>':'';
+      x.innerHTML=allOption+opts;
+    });
   }
 
 
@@ -67,7 +73,7 @@
     $('contactTbody').innerHTML=state.contacts.map(c=>'<tr>'+
       '<td><input type="checkbox" data-select="'+esc(c.contact_id)+'" '+(state.selected.has(c.contact_id)?'checked':'')+'></td>'+
       '<td><strong>'+esc(c.full_name)+'</strong></td><td>'+esc(c.position)+'</td><td>'+esc(orgName(c.org_id))+'</td>'+
-      '<td>'+esc(c.phone)+'</td><td>'+(c.public_flag?'Có':'Không')+'</td>'+
+      '<td>'+esc(groupName(c.group_id)||'—')+'</td><td>'+esc(c.phone)+'</td><td>'+(c.public_flag?'Có':'Không')+'</td>'+
       '<td><span class="badge '+(c.data_quality==='PASS'?'pass':'review')+'">'+esc(c.data_quality)+'</span></td>'+
       '<td><button data-edit="'+esc(c.contact_id)+'">Sửa</button> <button data-avatar="'+esc(c.contact_id)+'">Ảnh</button> <button data-status="'+esc(c.contact_id)+'" data-next="'+(c.status==='ACTIVE'?'INACTIVE':'ACTIVE')+'">'+(c.status==='ACTIVE'?'Ngừng':'Kích hoạt')+'</button></td></tr>').join('');
     document.querySelectorAll('[data-select]').forEach(x=>x.onchange=()=>{x.checked?state.selected.add(x.dataset.select):state.selected.delete(x.dataset.select);$('selectedCount').textContent=state.selected.size+' đã chọn'});
@@ -77,8 +83,20 @@
   }
 
 
+  function contactGroupOptions(orgId,selectedId){
+    const rows=(state.boot.groups||[]).filter(g=>String(g.org_id)===String(orgId));
+    return '<option value="">Không chọn Ban/Nhóm</option>'+rows.map(g=>
+      '<option value="'+esc(g.group_id)+'" '+(String(g.group_id)===String(selectedId||'')?'selected':'')+'>'+esc(g.group_name)+'</option>'
+    ).join('');
+  }
+
+  function refreshContactGroupSelect(selectedId){
+    const select=$('fGroup');if(!select)return;
+    select.innerHTML=contactGroupOptions($('fOrg').value,selectedId);
+  }
+
   function openContactForm(c){
-    c=c||{org_id:(state.boot.user.scope_org_id||''),public_flag:true,status:'ACTIVE'};
+    c=c||{org_id:(state.boot.user.scope_org_id||''),group_id:'',public_flag:true,status:'ACTIVE'};
     const orgOpts=(state.boot.organizations||[]).filter(o=>o.status==='ACTIVE').map(o=>'<option value="'+esc(o.org_id)+'" '+(o.org_id===c.org_id?'selected':'')+'>'+esc(o.org_name)+'</option>').join('');
     const reviewMode=(state.boot.phase4&&state.boot.phase4.review_mode)||'OPTIONAL';
     const isUnit=state.boot.user.role_id==='UNIT_ADMIN';
@@ -89,15 +107,18 @@
       '<label>Số điện thoại<input id="fPhone" value="'+esc(c.phone||'')+'"></label>'+
       '<label>Email<input id="fEmail" value="'+esc(c.email||'')+'"></label>'+
       '<label>Đơn vị<select id="fOrg">'+orgOpts+'</select></label>'+
+      '<label>Ban/Nhóm<select id="fGroup"></select></label>'+
       '<label>Thứ tự<input id="fOrder" type="number" value="'+Number(c.sort_order||999)+'"></label>'+
       '</div><label><input id="fPublic" type="checkbox" '+(c.public_flag!==false?'checked':'')+'> Hiển thị công khai</label>'+
       reviewHtml+
       '<div class="form-actions"><button id="cancelModal">Hủy</button><button id="saveContact" class="primary">Lưu</button></div>';
     show('formModal');$('cancelModal').onclick=()=>hide('formModal');
+    refreshContactGroupSelect(c.group_id||'');
+    $('fOrg').onchange=()=>refreshContactGroupSelect('');
     $('saveContact').onclick=async()=>{
       const data={
         contact_id:c.contact_id||'',full_name:$('fName').value,position:$('fPosition').value,
-        phone:$('fPhone').value,email:$('fEmail').value,org_id:$('fOrg').value,
+        phone:$('fPhone').value,email:$('fEmail').value,org_id:$('fOrg').value,group_id:$('fGroup').value,
         sort_order:Number($('fOrder').value||999),public_flag:$('fPublic').checked,
         submit_for_review:$('fSubmitReview')?$('fSubmitReview').checked:false
       };
@@ -138,6 +159,70 @@
     if($('removeAvatarBtn')) $('removeAvatarBtn').onclick=async()=>{
       await rpc('removeAvatar',{token:state.token,contact_id:c.contact_id});
       hide('formModal');toast('Đã bỏ ảnh khỏi hồ sơ');await loadContacts();
+    };
+  }
+
+  async function loadGroups(){
+    state.groupsAdmin=await rpc('listGroups',{token:state.token,filters:{
+      query:$('groupSearch')?$('groupSearch').value:'',
+      org_id:$('groupOrgFilter')?$('groupOrgFilter').value:'',
+      group_type:$('groupTypeFilter')?$('groupTypeFilter').value:'',
+      status:$('groupStatusFilter')?$('groupStatusFilter').value:''
+    }});
+    renderGroupsAdmin();
+  }
+
+  function renderGroupsAdmin(){
+    if(!$('groupTbody'))return;
+    $('groupTbody').innerHTML=state.groupsAdmin.length?state.groupsAdmin.map(g=>'<tr>'+
+      '<td><strong>'+esc(g.group_name)+'</strong></td>'+
+      '<td>'+esc(groupTypeLabel(g.group_type))+'</td>'+
+      '<td>'+esc(orgName(g.org_id))+'</td>'+
+      '<td>'+Number(g.active_contact_count||0)+'</td>'+
+      '<td><span class="badge '+(g.status==='ACTIVE'?'active':'locked')+'">'+(g.status==='ACTIVE'?'Đang dùng':'Ngừng dùng')+'</span></td>'+
+      '<td>'+Number(g.sort_order||999)+'</td>'+
+      '<td><button data-groupedit="'+esc(g.group_id)+'">Sửa</button> <button data-groupstatus="'+esc(g.group_id)+'" data-next="'+(g.status==='ACTIVE'?'INACTIVE':'ACTIVE')+'">'+(g.status==='ACTIVE'?'Ngừng':'Kích hoạt')+'</button></td></tr>').join(''):
+      '<tr><td colspan="7" class="muted">Chưa có Ban/Nhóm phù hợp bộ lọc.</td></tr>';
+    document.querySelectorAll('[data-groupedit]').forEach(x=>x.onclick=()=>openGroupForm(state.groupsAdmin.find(g=>g.group_id===x.dataset.groupedit)));
+    document.querySelectorAll('[data-groupstatus]').forEach(x=>x.onclick=async()=>{
+      await rpc('setGroupStatus',{token:state.token,group_id:x.dataset.groupstatus,status:x.dataset.next});
+      toast('Đã cập nhật Ban/Nhóm');await bootstrap();
+    });
+  }
+
+  function groupTypeOptions(orgId,currentType){
+    const org=(state.boot.organizations||[]).find(o=>String(o.org_id)===String(orgId));
+    const level=Number(org&&org.level||0);
+    const rows=level===1?[
+      ['PROVINCE_DEPARTMENT','Ban/Bộ phận cấp tỉnh'],['ASSOCIATION','Hội/Tổ chức'],['OTHER','Khác']
+    ]:level===2?[
+      ['COMMUNE_GROUP','Ban/Bộ phận cấp xã'],['OTHER','Khác']
+    ]:[
+      ['LEVEL3_GROUP','Nhóm/Bộ phận cấp 3'],['OTHER','Khác']
+    ];
+    return rows.map(([v,l])=>'<option value="'+v+'" '+(String(v)===String(currentType||'')?'selected':'')+'>'+l+'</option>').join('');
+  }
+
+  function openGroupForm(g){
+    g=g||{};
+    const orgs=(state.boot.organizations||[]).filter(o=>o.status==='ACTIVE');
+    const defaultOrg=g.org_id||state.boot.user.scope_org_id||orgs[0]?.org_id||'';
+    const orgOpts=orgs.map(o=>'<option value="'+esc(o.org_id)+'" '+(String(o.org_id)===String(defaultOrg)?'selected':'')+'>'+esc(o.org_name)+'</option>').join('');
+    $('formModalBody').innerHTML='<h2>'+(g.group_id?'Sửa Ban/Nhóm':'Thêm Ban/Nhóm')+'</h2>'+
+      '<p class="muted">Ban/Nhóm là bộ phận trực thuộc một đơn vị. Đơn vị cấp tỉnh/xã/cấp 3 được quản lý ở cấu trúc đơn vị.</p>'+
+      '<div class="form-grid">'+
+      '<label>Đơn vị chủ quản<select id="gOrg" '+(g.group_id?'disabled':'')+'>'+orgOpts+'</select></label>'+
+      '<label>Loại<select id="gType"></select></label>'+
+      '<label>Tên Ban/Nhóm<input id="gName" value="'+esc(g.group_name||'')+'" placeholder="Ví dụ: Văn phòng, Ban Thường trực..."></label>'+
+      '<label>Thứ tự<input id="gOrder" type="number" min="0" value="'+Number(g.sort_order||999)+'"></label>'+
+      '</div><div class="form-actions"><button id="cancelModal">Hủy</button><button id="saveGroup" class="primary">Lưu</button></div>';
+    show('formModal');$('cancelModal').onclick=()=>hide('formModal');
+    const syncTypes=()=>{$('gType').innerHTML=groupTypeOptions($('gOrg').value,g.group_type||'')};
+    syncTypes();if(!g.group_id)$('gOrg').onchange=syncTypes;
+    $('saveGroup').onclick=async()=>{
+      const data={group_id:g.group_id||'',org_id:$('gOrg').value,group_type:$('gType').value,group_name:$('gName').value,sort_order:Number($('gOrder').value||999)};
+      await rpc(g.group_id?'updateGroup':'createGroup',{token:state.token,data});
+      hide('formModal');toast('Đã lưu Ban/Nhóm');await bootstrap();
     };
   }
 
@@ -261,6 +346,10 @@
   $('logoutBtn').onclick=async()=>{try{await rpc('logout',{token:state.token})}catch(e){}sessionStorage.removeItem('mttq_admin_token');state.token='';location.reload()};
   document.querySelectorAll('.admin-nav [data-tab]').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.admin-nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.tab-pane').forEach(x=>x.classList.add('hidden'));$('tab-'+btn.dataset.tab).classList.remove('hidden')});
   $('addContactBtn').onclick=()=>openContactForm(null);$('refreshContactsBtn').onclick=loadContacts;
+  if($('addGroupBtn')) $('addGroupBtn').onclick=()=>openGroupForm(null);
+  if($('refreshGroupsBtn')) $('refreshGroupsBtn').onclick=loadGroups;
+  ['groupOrgFilter','groupTypeFilter','groupStatusFilter'].forEach(id=>{if($(id))$(id).onchange=loadGroups});
+  if($('groupSearch')) $('groupSearch').onkeydown=e=>{if(e.key==='Enter')loadGroups()};
   $('moveBtn').onclick=async()=>{if(!state.selected.size)return toast('Chưa chọn cán bộ');await rpc('moveContacts',{token:state.token,contact_ids:Array.from(state.selected),target_org_id:$('moveTargetOrg').value});toast('Đã chuyển đơn vị');await loadContacts()};
   $('addLevel3Btn').onclick=()=>openLevel3Form(null);
   $('previewImportBtn').onclick=()=>previewImport().catch(e=>toast(e.message||String(e)));

@@ -23,6 +23,10 @@ function adminApi(action,payload) {
     case 'updateContact': return adminSaveContactPhase4_(payload.token,payload.data);
     case 'setContactStatus': return adminSetContactStatusPhase4_(payload.token,payload.contact_id,payload.status,payload.submit_for_review);
     case 'moveContacts': return adminMoveContacts_(payload.token,payload.contact_ids,payload.target_org_id);
+    case 'listGroups': return listAdminGroups_(payload.token,payload.filters);
+    case 'createGroup': return adminCreateGroup_(payload.token,payload.data);
+    case 'updateGroup': return adminUpdateGroup_(payload.token,payload.data);
+    case 'setGroupStatus': return adminSetGroupStatus_(payload.token,payload.group_id,payload.status);
     case 'listLevel3': return listLevel3Organizations_(payload.token);
     case 'createLevel3': return adminCreateLevel3_(payload.token,payload.data);
     case 'updateLevel3': return adminUpdateLevel3_(payload.token,payload.data);

@@ -329,6 +329,45 @@ function runtimeAcceptanceCore_(token) {
         unit2Login.user.role_id === 'UNIT_ADMIN' &&
         String(unit2Login.user.scope_org_id) === String(org2.org_id));
 
+      denied('CROSS_SCOPE_GROUP_WRITE_DENIED', () =>
+        adminCreateGroup_(unit1Login.token,{
+          org_id:String(org2.org_id),
+          group_type:'COMMUNE_GROUP',
+          group_name:'Acceptance Cross Scope Group'
+        })
+      );
+
+      currentTest = 'GROUP_CREATE_OWN_SCOPE';
+      let acceptanceGroup = adminCreateGroup_(unit1Login.token,{
+        org_id:String(org1.org_id),
+        group_type:'COMMUNE_GROUP',
+        group_name:'Acceptance Group ' + Utilities.getUuid().slice(0,8),
+        sort_order:77
+      });
+      mark('GROUP_CREATE_OWN_SCOPE',
+        !!acceptanceGroup.group_id && String(acceptanceGroup.org_id) === String(org1.org_id));
+
+      denied('GROUP_DUPLICATE_DENIED', () =>
+        adminCreateGroup_(unit1Login.token,{
+          org_id:String(org1.org_id),
+          group_type:'COMMUNE_GROUP',
+          group_name:acceptanceGroup.group_name
+        })
+      );
+
+      acceptanceGroup = adminUpdateGroup_(unit1Login.token,{
+        group_id:acceptanceGroup.group_id,
+        org_id:String(org1.org_id),
+        group_type:'COMMUNE_GROUP',
+        group_name:acceptanceGroup.group_name + ' Updated',
+        sort_order:78
+      });
+      mark('GROUP_UPDATE_OWN_SCOPE', String(acceptanceGroup.group_name).includes('Updated'));
+
+      const publicAfterGroup = getPublicDirectoryData_(true);
+      mark('PUBLIC_GROUP_VISIBLE',
+        publicAfterGroup.groups.some(g => String(g.group_id) === String(acceptanceGroup.group_id)));
+
       const crossRead = listAdminContacts_(unit1Login.token,{org_id:String(org2.org_id)});
       mark('CROSS_SCOPE_READ_FILTERED', Array.isArray(crossRead) && crossRead.length === 0);
 
@@ -361,6 +400,7 @@ function runtimeAcceptanceCore_(token) {
       currentTest = 'CONTACT_CREATE';
       let contact = adminCreateContact_(unit1Login.token,{
         org_id:String(org1.org_id),
+        group_id:String(acceptanceGroup.group_id),
         full_name:'Acceptance Contact',
         position:'Test',
         phone:runtimeUniquePhone_(),
@@ -368,6 +408,12 @@ function runtimeAcceptanceCore_(token) {
         public_flag:true
       });
       mark('CONTACT_CREATE', !!contact.contact_id);
+      mark('CONTACT_GROUP_ASSIGNMENT',
+        String(contact.group_id) === String(acceptanceGroup.group_id));
+
+      denied('GROUP_WITH_ACTIVE_CONTACT_DISABLE_DENIED', () =>
+        adminSetGroupStatus_(unit1Login.token,acceptanceGroup.group_id,'INACTIVE')
+      );
 
       currentTest = 'CONTACT_UPDATE';
       contact = adminUpdateContact_(unit1Login.token,{
@@ -390,6 +436,12 @@ function runtimeAcceptanceCore_(token) {
 
       const moved = adminMoveContacts_(unit1Login.token,[contact.contact_id],String(l3.org_id));
       mark('CONTACT_MOVE_OWN_LEVEL3', moved && moved.moved === 1);
+
+      const disabledGroup = adminSetGroupStatus_(unit1Login.token,acceptanceGroup.group_id,'INACTIVE');
+      mark('GROUP_DISABLE_AFTER_CONTACT_MOVE', String(disabledGroup.status) === 'INACTIVE');
+      const publicAfterDisable = getPublicDirectoryData_(true);
+      mark('INACTIVE_GROUP_HIDDEN_PUBLIC',
+        !publicAfterDisable.groups.some(g => String(g.group_id) === String(acceptanceGroup.group_id)));
 
       runtimeSetSetting_('UNIT_ADMIN_REVIEW_MODE','OPTIONAL');
       currentTest = 'REVIEW_OPTIONAL';
