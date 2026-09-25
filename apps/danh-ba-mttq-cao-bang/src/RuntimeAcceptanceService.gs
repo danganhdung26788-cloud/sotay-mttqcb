@@ -436,13 +436,9 @@ function runtimeAcceptanceCore_(token) {
       });
       mark('STALE_REVIEW_QUEUED', staleReq && staleReq.queued === true);
 
-      adminUpdateContact_(adminLogin.token,{
-        contact_id:currentContact.contact_id,
-        org_id:currentContact.org_id,
-        full_name:currentContact.full_name,
-        phone:currentContact.phone,
-        email:currentContact.email,
-        position:'Intervening update'
+      updateByHeaders_(CONFIG.SHEETS.CONTACTS,currentContact._row,{
+        position:'Intervening update',
+        updated_at:'2099-12-31T23:59:59+07:00'
       });
 
       denied('STALE_REVIEW_APPROVAL_DENIED', () =>
