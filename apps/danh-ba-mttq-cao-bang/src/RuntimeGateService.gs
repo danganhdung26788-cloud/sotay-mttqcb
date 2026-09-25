@@ -101,9 +101,29 @@ function runtimeGateResponse_(e) {
   try {
     const token = String((e && e.parameter && e.parameter.token) || '');
     const mode = String((e && e.parameter && e.parameter.mode) || 'baseline').toLowerCase();
-    const result = mode === 'provision'
-      ? runtimeProvisionPendingCredentials_(token)
-      : runRuntimeBaselineGate_(token);
+    let result;
+
+    switch (mode) {
+      case 'provision':
+        result = runtimeProvisionPendingCredentials_(token);
+        break;
+      case 'acceptance_prepare':
+        result = runtimeAcceptancePrepare_(token);
+        break;
+      case 'acceptance_core':
+        result = runtimeAcceptanceCore_(token);
+        break;
+      case 'acceptance_restore':
+        result = runtimeAcceptanceRestore_(token);
+        break;
+      case 'acceptance_cleanup':
+        result = runtimeAcceptanceCleanup_(token);
+        break;
+      case 'baseline':
+      default:
+        result = runRuntimeBaselineGate_(token);
+        break;
+    }
 
     return ContentService
       .createTextOutput(JSON.stringify(result))
