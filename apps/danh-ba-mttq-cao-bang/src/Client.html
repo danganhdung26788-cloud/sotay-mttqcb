@@ -1,9 +1,26 @@
 <script>
 (() => {
-  const state={data:null,selectedOrgId:null,selectedGroupId:'',search:'',expanded:new Set()};
+  const state={
+    data:null,
+    selectedOrgId:null,
+    selectedGroupId:'',
+    search:'',
+    expanded:new Set(),
+    groupsExpanded:false,
+    viewMode:localStorage.getItem('danhba:view')==='list'?'list':'card',
+    sidebarCollapsed:localStorage.getItem('danhba:sidebar')==='collapsed'
+  };
   const $=id=>document.getElementById(id);
-  const el={tree:$('orgTree'),grid:$('contactGrid'),loading:$('loadingState'),error:$('errorState'),empty:$('emptyState'),errorMessage:$('errorMessage'),search:$('globalSearch'),clear:$('clearSearch'),title:$('currentTitle'),subtitle:$('currentSubtitle'),breadcrumb:$('breadcrumb'),groups:$('groupChips'),summary:$('resultSummary'),statUnits:$('statUnits'),statContacts:$('statContacts'),countTop:$('contactCountTop'),lastUpdated:$('lastUpdated'),sidebar:$('sidebar'),backdrop:$('sidebarBackdrop')};
-
+  const el={
+    app:$('app'),tree:$('orgTree'),grid:$('contactGrid'),loading:$('loadingState'),error:$('errorState'),
+    empty:$('emptyState'),errorMessage:$('errorMessage'),search:$('globalSearch'),clear:$('clearSearch'),
+    title:$('currentTitle'),subtitle:$('currentSubtitle'),meta:$('currentMeta'),breadcrumb:$('breadcrumb'),
+    groups:$('groupChips'),filterPanel:$('filterPanel'),groupMore:$('groupMoreBtn'),filterToggle:$('filterToggleBtn'),
+    filterCount:$('filterCountBadge'),summary:$('resultSummary'),statUnits:$('statUnits'),statContacts:$('statContacts'),
+    mobileStatUnits:$('mobileStatUnits'),mobileStatContacts:$('mobileStatContacts'),countTop:$('contactCountTop'),
+    lastUpdated:$('lastUpdated'),sidebar:$('sidebar'),backdrop:$('sidebarBackdrop'),
+    collapseSidebar:$('collapseSidebarBtn'),viewCard:$('viewCardBtn'),viewList:$('viewListBtn')
+  };
 
   function runServer(fn,...args){return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args))}
   function esc(v){return String(v==null?'':v).replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]))}
@@ -11,10 +28,10 @@
   function phoneDigits(v){return String(v||'').replace(/\D/g,'')}
   function zaloPhone(v){const p=phoneDigits(v);return p.startsWith('0')?'84'+p.slice(1):p}
   function initials(name){const p=String(name||'').trim().split(/\s+/).filter(Boolean);return(p.slice(-2).map(x=>x[0]||'').join('')||'MT').toUpperCase()}
-  function orgById(id){return state.data.organizations.find(x=>x.org_id===id)||null}
+  function orgById(id){return state.data?.organizations.find(x=>x.org_id===id)||null}
   function childrenOf(id){return state.data.organizations.filter(x=>x.parent_org_id===id).sort((a,b)=>a.sort_order-b.sort_order)}
   function directCount(id){return state.data.contacts.filter(x=>x.org_id===id).length}
-
+  function orgIcon(org){return Number(org.level)===1?'◆':(Number(org.level)===2?'●':'○')}
 
   function avatarHtml(c){
     const fallback='<div class="avatar avatar-fallback">'+esc(initials(c.full_name))+'</div>';
@@ -25,102 +42,249 @@
       '<div class="avatar avatar-fallback" style="display:none">'+esc(initials(c.full_name))+'</div></div>';
   }
 
-
   function nodeHtml(org){
-    const children=childrenOf(org.org_id),expanded=state.expanded.has(org.org_id)||org.level===1,active=state.selectedOrgId===org.org_id;
-    const toggle=children.length?'<button class="tree-toggle" data-toggle="'+esc(org.org_id)+'">'+(expanded?'▾':'▸')+'</button>':'<span></span>';
+    const children=childrenOf(org.org_id);
+    const expanded=state.expanded.has(org.org_id)||org.level===1;
+    const active=state.selectedOrgId===org.org_id;
+    const toggle=children.length?'<button class="tree-toggle" type="button" data-toggle="'+esc(org.org_id)+'" aria-label="'+(expanded?'Thu gọn':'Mở rộng')+'">'+(expanded?'▾':'▸')+'</button>':'<span></span>';
     const child=children.length&&expanded?'<div class="tree-children">'+children.map(nodeHtml).join('')+'</div>':'';
-    return '<div class="tree-node"><button class="tree-row '+(active?'active':'')+'" data-org="'+esc(org.org_id)+'">'+toggle+'<span class="tree-name">'+esc(org.org_name)+'</span><span class="tree-count">'+directCount(org.org_id)+'</span></button>'+child+'</div>';
+    return '<div class="tree-node"><button class="tree-row '+(active?'active':'')+'" type="button" data-org="'+esc(org.org_id)+'" title="'+esc(org.org_name)+'">'+
+      toggle+'<span class="tree-icon" aria-hidden="true">'+orgIcon(org)+'</span><span class="tree-name">'+esc(org.org_name)+'</span><span class="tree-count">'+directCount(org.org_id)+'</span></button>'+child+'</div>';
   }
-
 
   function renderTree(){
     const roots=state.data.organizations.filter(x=>!x.parent_org_id||x.level===1);
     el.tree.innerHTML=roots.map(nodeHtml).join('');
-    el.tree.querySelectorAll('[data-org]').forEach(btn=>btn.addEventListener('click',e=>{if(e.target.closest('[data-toggle]'))return;selectOrg(btn.dataset.org)}));
-    el.tree.querySelectorAll('[data-toggle]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();const id=btn.dataset.toggle;state.expanded.has(id)?state.expanded.delete(id):state.expanded.add(id);renderTree()}));
+    el.tree.querySelectorAll('[data-org]').forEach(btn=>btn.addEventListener('click',e=>{
+      if(e.target.closest('[data-toggle]'))return;
+      selectOrg(btn.dataset.org);
+    }));
+    el.tree.querySelectorAll('[data-toggle]').forEach(btn=>btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const id=btn.dataset.toggle;
+      state.expanded.has(id)?state.expanded.delete(id):state.expanded.add(id);
+      renderTree();
+    }));
   }
 
-
   function selectOrg(id){
-    state.selectedOrgId=id;state.selectedGroupId='';state.search='';el.search.value='';el.clear.classList.add('hidden');
-    const org=orgById(id);if(org)state.expanded.add(org.parent_org_id||org.org_id);
+    state.selectedOrgId=id;
+    state.selectedGroupId='';
+    state.search='';
+    state.groupsExpanded=false;
+    el.search.value='';
+    el.clear.classList.add('hidden');
+    const org=orgById(id);
+    if(org)state.expanded.add(org.parent_org_id||org.org_id);
     renderTree();renderGroups();updateHeading();renderContacts();closeSidebar();
   }
 
-
-  function renderGroups(){
-    const groups=state.data.groups.filter(g=>g.org_id===state.selectedOrgId);
-    if(!groups.length){el.groups.innerHTML='';return}
-    el.groups.innerHTML='<button class="chip '+(!state.selectedGroupId?'active':'')+'" data-group="">Tất cả</button>'+groups.map(g=>'<button class="chip '+(state.selectedGroupId===g.group_id?'active':'')+'" data-group="'+esc(g.group_id)+'">'+esc(g.group_name)+'</button>').join('');
-    el.groups.querySelectorAll('[data-group]').forEach(btn=>btn.addEventListener('click',()=>{state.selectedGroupId=btn.dataset.group||'';renderGroups();renderContacts()}));
+  function currentGroups(){
+    if(!state.selectedOrgId||!state.data)return[];
+    return state.data.groups.filter(g=>g.org_id===state.selectedOrgId);
   }
 
+  function renderGroups(){
+    const groups=currentGroups();
+    if(!groups.length){
+      el.groups.innerHTML='';
+      el.groupMore.classList.add('hidden');
+      el.filterCount.classList.add('hidden');
+      el.filterPanel.classList.remove('expanded');
+      el.filterToggle.setAttribute('aria-expanded','false');
+      return;
+    }
+    const visibleLimit=6;
+    const chips=[{group_id:'',group_name:'Tất cả'},...groups];
+    el.groups.innerHTML=chips.map((g,i)=>{
+      const active=state.selectedGroupId===g.group_id;
+      const overflow=i>=visibleLimit?' chip-overflow':'';
+      return '<button class="chip '+(active?'active ':'')+overflow+'" type="button" data-group="'+esc(g.group_id)+'">'+esc(g.group_name)+'</button>';
+    }).join('');
+    const hasOverflow=chips.length>visibleLimit;
+    el.groupMore.classList.toggle('hidden',!hasOverflow);
+    el.groupMore.textContent=state.groupsExpanded?'Thu gọn':'Xem thêm';
+    el.groupMore.setAttribute('aria-expanded',String(state.groupsExpanded));
+    el.filterPanel.classList.toggle('expanded',state.groupsExpanded);
+    el.filterToggle.setAttribute('aria-expanded',String(state.groupsExpanded));
+    if(state.selectedGroupId){
+      el.filterCount.textContent='1';
+      el.filterCount.classList.remove('hidden');
+    }else{
+      el.filterCount.classList.add('hidden');
+    }
+    el.groups.querySelectorAll('[data-group]').forEach(btn=>btn.addEventListener('click',()=>{
+      state.selectedGroupId=btn.dataset.group||'';
+      renderGroups();updateHeading();renderContacts();
+    }));
+  }
 
   function descendantIds(id){
     const out=new Set([id]);let changed=true;
-    while(changed){changed=false;state.data.organizations.forEach(o=>{if(out.has(o.parent_org_id)&&!out.has(o.org_id)){out.add(o.org_id);changed=true}})}
+    while(changed){
+      changed=false;
+      state.data.organizations.forEach(o=>{
+        if(out.has(o.parent_org_id)&&!out.has(o.org_id)){out.add(o.org_id);changed=true}
+      });
+    }
     return out;
   }
 
-
   function filteredContacts(){
-    const q=normalize(state.search),qp=phoneDigits(state.search);let rows=state.data.contacts.slice();
-    if(q){rows=rows.filter(c=>[c.full_name,c.position,c.org_name,c.group_name].some(v=>normalize(v).includes(q))||(qp&&phoneDigits(c.phone).includes(qp)))}
-    else if(state.selectedOrgId){const allowed=descendantIds(state.selectedOrgId);rows=rows.filter(c=>allowed.has(c.org_id))}
+    const q=normalize(state.search),qp=phoneDigits(state.search);
+    let rows=state.data.contacts.slice();
+    if(q){
+      rows=rows.filter(c=>
+        [c.full_name,c.position,c.org_name,c.group_name].some(v=>normalize(v).includes(q)) ||
+        (qp&&phoneDigits(c.phone).includes(qp))
+      );
+    }else if(state.selectedOrgId){
+      const allowed=descendantIds(state.selectedOrgId);
+      rows=rows.filter(c=>allowed.has(c.org_id));
+    }
     if(state.selectedGroupId)rows=rows.filter(c=>c.group_id===state.selectedGroupId);
     return rows.sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999)||String(a.full_name).localeCompare(String(b.full_name),'vi'));
   }
 
-
-  function cardHtml(c){
-    const p=phoneDigits(c.phone);
-    const call=p?'<a class="action-link" href="tel:'+esc(p)+'">☎ Gọi</a>':'<span class="action-link disabled">☎ Gọi</span>';
-    const zalo=p?'<a class="action-link" target="_blank" rel="noopener" href="https://zalo.me/'+esc(zaloPhone(p))+'">Zalo</a>':'<span class="action-link disabled">Zalo</span>';
-    const mail=c.email?'<a class="action-link" href="mailto:'+esc(c.email)+'">✉ Email</a>':'<span class="action-link disabled">✉ Email</span>';
-    const unit=[c.group_name,c.org_name].filter(Boolean).join(' · ');
-    return '<article class="contact-card">'+avatarHtml(c)+'<div><div class="contact-name">'+esc(c.full_name)+'</div><div class="contact-position">'+esc(c.position||'—')+'</div><div class="contact-org">'+esc(unit)+'</div><div class="contact-phone">'+esc(c.phone||'Chưa cập nhật SĐT')+'</div></div><div class="card-actions">'+call+zalo+mail+'</div></article>';
+  function contactContext(c){
+    const selected=orgById(state.selectedOrgId);
+    if(state.search||!selected){
+      return [c.group_name,c.org_name].filter(Boolean).join(' · ');
+    }
+    if(String(c.org_id)===String(selected.org_id)){
+      return c.group_name||'';
+    }
+    return [c.group_name,c.org_name].filter(Boolean).join(' · ');
   }
 
+  function actionHtml(c){
+    const p=phoneDigits(c.phone);
+    const call=p?'<a class="action-link" href="tel:'+esc(p)+'" title="Gọi"><span aria-hidden="true">☎</span><span class="action-text">Gọi</span></a>':'<span class="action-link disabled" title="Không có số điện thoại">☎</span>';
+    const zalo=p?'<a class="action-link" target="_blank" rel="noopener" href="https://zalo.me/'+esc(zaloPhone(p))+'" title="Zalo"><span aria-hidden="true">Z</span><span class="action-text">Zalo</span></a>':'<span class="action-link disabled">Z</span>';
+    const mail=c.email?'<a class="action-link" href="mailto:'+esc(c.email)+'" title="Email"><span aria-hidden="true">✉</span><span class="action-text">Email</span></a>':'<span class="action-link disabled">✉</span>';
+    return call+zalo+mail;
+  }
+
+  function cardHtml(c){
+    const context=contactContext(c);
+    return '<article class="contact-card">'+avatarHtml(c)+
+      '<div class="contact-main"><div class="contact-name">'+esc(c.full_name)+'</div>'+
+      '<div class="contact-position">'+esc(c.position||'—')+'</div>'+
+      '<div class="contact-org">'+esc(context||' ')+'</div>'+
+      '<div class="contact-phone">'+esc(c.phone||'Chưa cập nhật SĐT')+'</div></div>'+
+      '<div class="card-actions">'+actionHtml(c)+'</div></article>';
+  }
+
+  function applyViewMode(){
+    const list=state.viewMode==='list';
+    el.grid.classList.toggle('list-view',list);
+    el.viewCard.classList.toggle('active',!list);
+    el.viewList.classList.toggle('active',list);
+    el.viewCard.setAttribute('aria-pressed',String(!list));
+    el.viewList.setAttribute('aria-pressed',String(list));
+  }
 
   function renderContacts(){
-    const rows=filteredContacts();el.loading.classList.add('hidden');el.error.classList.add('hidden');
-    if(!rows.length){el.grid.classList.add('hidden');el.empty.classList.remove('hidden')}
-    else{el.empty.classList.add('hidden');el.grid.classList.remove('hidden');el.grid.innerHTML=rows.map(cardHtml).join('')}
+    const rows=filteredContacts();
+    el.loading.classList.add('hidden');el.error.classList.add('hidden');
+    if(!rows.length){
+      el.grid.classList.add('hidden');el.empty.classList.remove('hidden');
+    }else{
+      el.empty.classList.add('hidden');el.grid.classList.remove('hidden');
+      el.grid.innerHTML=rows.map(cardHtml).join('');
+      applyViewMode();
+    }
     el.summary.textContent=rows.length+' kết quả'+(state.search?' cho “'+state.search+'”':'');
   }
 
-
   function updateHeading(){
+    if(!state.data)return;
     const org=orgById(state.selectedOrgId);
-    if(!org){el.title.textContent='Toàn bộ danh bạ';el.subtitle.textContent='Tìm kiếm trên toàn hệ thống.';el.breadcrumb.textContent='Danh bạ';return}
-    el.title.textContent=org.org_name;const parent=orgById(org.parent_org_id);
-    el.breadcrumb.textContent=parent?parent.org_name+' / '+org.org_name:'Cấp tỉnh';
-    el.subtitle.textContent=org.level===1?'Khối cơ quan cấp tỉnh, các ban và hội quần chúng.':(org.level===2?'MTTQ cấp xã/phường và các thôn/xóm trực thuộc.':'Đơn vị cấp thôn/xóm/tổ dân phố.');
+    const rows=filteredContacts();
+    const groups=currentGroups();
+    if(state.search){
+      el.title.textContent='Kết quả tìm kiếm';
+      el.breadcrumb.textContent='Danh bạ / Tìm kiếm';
+      el.subtitle.textContent='Tìm trên toàn bộ danh bạ MTTQ tỉnh Cao Bằng.';
+      el.meta.textContent=rows.length+' kết quả';
+      return;
+    }
+    if(!org){
+      el.title.textContent='Toàn bộ danh bạ';
+      el.subtitle.textContent='Tra cứu cán bộ trên toàn hệ thống.';
+      el.breadcrumb.textContent='Danh bạ';
+      el.meta.textContent=rows.length+' cán bộ · '+state.data.organizations.length+' đơn vị';
+      return;
+    }
+    const parent=orgById(org.parent_org_id);
+    el.title.textContent=org.org_name;
+    el.breadcrumb.textContent=parent?'Danh bạ / '+parent.org_name+' / '+org.org_name:'Danh bạ / Cấp tỉnh';
+    el.meta.textContent=rows.length+' cán bộ'+(groups.length?' · '+groups.length+' nhóm':'');
+    el.subtitle.textContent=org.level===1?'Khối cơ quan cấp tỉnh, các ban và hội quần chúng.':(org.level===2?'MTTQ cấp xã/phường và các đơn vị cấp 3 trực thuộc.':'Đơn vị cấp thôn, xóm hoặc tổ dân phố.');
   }
-
 
   function openSidebar(){el.sidebar.classList.add('open');el.backdrop.classList.remove('hidden')}
   function closeSidebar(){el.sidebar.classList.remove('open');el.backdrop.classList.add('hidden')}
-
+  function setSidebarCollapsed(collapsed){
+    state.sidebarCollapsed=!!collapsed;
+    el.app.classList.toggle('sidebar-collapsed',state.sidebarCollapsed);
+    localStorage.setItem('danhba:sidebar',state.sidebarCollapsed?'collapsed':'open');
+    el.collapseSidebar.setAttribute('aria-label',state.sidebarCollapsed?'Mở rộng danh sách đơn vị':'Thu gọn danh sách đơn vị');
+  }
+  function setViewMode(mode){
+    state.viewMode=mode==='list'?'list':'card';
+    localStorage.setItem('danhba:view',state.viewMode);
+    applyViewMode();
+  }
 
   async function load(){
     el.loading.classList.remove('hidden');el.error.classList.add('hidden');el.grid.classList.add('hidden');
     try{
       const data=await runServer('publicApi','bootstrap',{});
-      state.data=data;state.selectedOrgId=data.app.root_org_id;state.expanded.add(data.app.root_org_id);
-      el.statUnits.textContent=data.organizations.length+' đơn vị';el.statContacts.textContent=data.contacts.length+' cán bộ';el.countTop.textContent=data.contacts.length+' cán bộ';el.lastUpdated.textContent=data.generated_at?'Cập nhật: '+data.generated_at:'';
-      renderTree();renderGroups();updateHeading();renderContacts();
-    }catch(err){el.loading.classList.add('hidden');el.error.classList.remove('hidden');el.errorMessage.textContent=err&&err.message?err.message:String(err||'Không xác định')}
+      state.data=data;
+      state.selectedOrgId=data.app.root_org_id;
+      state.expanded.add(data.app.root_org_id);
+      const units=data.organizations.length+' đơn vị',contacts=data.contacts.length+' cán bộ';
+      el.statUnits.textContent=units;el.statContacts.textContent=contacts;
+      el.mobileStatUnits.textContent=units;el.mobileStatContacts.textContent=contacts;
+      el.countTop.textContent=contacts;
+      el.lastUpdated.textContent=data.generated_at?'Cập nhật: '+data.generated_at:'';
+      setSidebarCollapsed(state.sidebarCollapsed);
+      renderTree();renderGroups();updateHeading();renderContacts();applyViewMode();
+    }catch(err){
+      el.loading.classList.add('hidden');el.error.classList.remove('hidden');
+      el.errorMessage.textContent=err&&err.message?err.message:String(err||'Không xác định');
+    }
   }
 
-
-  el.search.addEventListener('input',()=>{state.search=el.search.value.trim();state.selectedGroupId='';el.clear.classList.toggle('hidden',!state.search);renderGroups();renderContacts();if(state.search){el.title.textContent='Kết quả tìm kiếm';el.subtitle.textContent='Tìm trên toàn bộ danh bạ MTTQ tỉnh Cao Bằng.';el.breadcrumb.textContent='Tìm kiếm'}else updateHeading()});
-  el.clear.addEventListener('click',()=>{el.search.value='';state.search='';el.clear.classList.add('hidden');updateHeading();renderContacts()});
-  document.getElementById('showAllBtn').addEventListener('click',()=>{state.selectedOrgId=null;state.selectedGroupId='';state.search='';el.search.value='';el.clear.classList.add('hidden');renderTree();renderGroups();updateHeading();renderContacts()});
-  document.getElementById('retryBtn').addEventListener('click',load);
-  document.getElementById('mobileMenuBtn').addEventListener('click',openSidebar);
-  document.getElementById('closeSidebarBtn').addEventListener('click',closeSidebar);
+  el.search.addEventListener('input',()=>{
+    state.search=el.search.value.trim();state.selectedGroupId='';
+    el.clear.classList.toggle('hidden',!state.search);
+    renderGroups();updateHeading();renderContacts();
+  });
+  el.clear.addEventListener('click',()=>{
+    el.search.value='';state.search='';el.clear.classList.add('hidden');
+    updateHeading();renderContacts();el.search.focus();
+  });
+  $('showAllBtn').addEventListener('click',()=>{
+    state.selectedOrgId=null;state.selectedGroupId='';state.search='';state.groupsExpanded=false;
+    el.search.value='';el.clear.classList.add('hidden');
+    renderTree();renderGroups();updateHeading();renderContacts();
+  });
+  el.groupMore.addEventListener('click',()=>{
+    state.groupsExpanded=!state.groupsExpanded;renderGroups();
+  });
+  el.filterToggle.addEventListener('click',()=>{
+    if(!currentGroups().length)return;
+    state.groupsExpanded=!state.groupsExpanded;renderGroups();
+    el.filterPanel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+  el.viewCard.addEventListener('click',()=>setViewMode('card'));
+  el.viewList.addEventListener('click',()=>setViewMode('list'));
+  el.collapseSidebar.addEventListener('click',()=>setSidebarCollapsed(!state.sidebarCollapsed));
+  $('retryBtn').addEventListener('click',load);
+  $('mobileMenuBtn').addEventListener('click',openSidebar);
+  $('closeSidebarBtn').addEventListener('click',closeSidebar);
   el.backdrop.addEventListener('click',closeSidebar);
   load();
 })();
