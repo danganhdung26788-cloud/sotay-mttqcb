@@ -21,28 +21,32 @@
 - [x] CI static validation.
 - [x] Internal Apps Script functions hidden with trailing `_`.
 - [x] Public server surface limited to `doGet`, `publicApi`, `adminApi`.
-- [x] Codex runtime handoff prepared in `CODEX_HANDOFF.md`.
-- [x] Codex takeover prompt prepared in `CODEX_PROMPT.md`.
-- [x] GitHub issue #4 created for runtime handoff.
+- [x] OAuth/clasp linked to real Apps Script project.
+- [x] `CLASPRC_JSON` and `CLASP_JSON` configured.
+- [x] Source push to Apps Script PASS.
+- [x] `setupDatabase_()` PASS.
+- [x] `verifyDatabase_()` baseline PASS: 57 organizations / 56 communes / 466 contacts / 57 users / 56 UNIT_ADMIN.
+- [x] `runPhase4RegressionTests_().ok === true`.
+- [x] Phase 4A runtime-gate automation implemented on protected branch.
 
-## Runtime gate — pending
-- [ ] Apps Script project created and linked by `scriptId`.
-- [ ] Apps Script API enabled for the deploying Google account.
-- [ ] `clasp login` OAuth completed by user.
-- [ ] `CLASPRC_JSON` and `CLASP_JSON` configured as GitHub Secrets.
-- [ ] Source push to Apps Script PASS.
-- [ ] `setupDatabase_()` PASS.
-- [ ] `verifyDatabase_()` confirms baseline.
-- [ ] Credential provisioning completed only if USERS are still `PENDING_PROVISION`.
-- [ ] `runPhase4RegressionTests_().ok === true`.
-- [ ] First Web App deployment created.
-- [ ] `CLASP_DEPLOYMENT_ID` stored as GitHub Secret.
+## Runtime gate / deployment
+- [ ] Phase 4A branch merged after CI PASS.
+- [ ] Automated credential-state result recorded.
+- [ ] Credential provisioning performed only if gate returns `REVIEW`.
+- [ ] Automated first production Web App deployment PASS.
+- [ ] Production deployment ID and Web App URL recorded by workflow.
+- [ ] Public/admin HTML smoke PASS.
+
+## Full acceptance — pending
 - [ ] Public directory runtime PASS.
+- [ ] Accent-insensitive global search PASS.
+- [ ] Public payload does not expose USERS/password/AUDIT/REVIEW internals.
 - [ ] Province admin runtime PASS.
 - [ ] At least 2 distinct UNIT_ADMIN accounts tested.
-- [ ] Cross-scope mutation denied.
+- [ ] Cross-scope read/write denied.
 - [ ] Password reset invalidates old token.
 - [ ] Level-3 own-scope create/update/status PASS.
+- [ ] Contact CRUD PASS.
 - [ ] Avatar same-scope PASS / cross-scope DENIED / invalid signature DENIED.
 - [ ] Review OPTIONAL PASS.
 - [ ] Review REQUIRED PASS.
@@ -50,6 +54,5 @@
 - [ ] Real backup creation/read-back PASS.
 - [ ] Arbitrary non-registered restore source denied.
 - [ ] Restore-on-clone PASS.
-- [ ] Production database not used as the first restore target.
-- [ ] Web App URL/deployment reference recorded.
-- [ ] Phase status changed to RUNTIME PASS only after every runtime item above passes.
+- [ ] Production database not used as first restore target.
+- [ ] Phase status changed to RUNTIME PASS only after every runtime acceptance item passes.
