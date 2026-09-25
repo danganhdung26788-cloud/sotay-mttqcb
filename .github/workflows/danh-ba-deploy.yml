@@ -161,7 +161,7 @@ jobs:
             echo "- Credential bootstrap: **$GATE**"
             echo "- Accounts provisioned: **$COUNT**"
             if [ -n "$FILE" ]; then
-              echo "- Private credential handoff file: `$FILE`"
+              echo "- Private credential handoff file: $FILE"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -194,6 +194,86 @@ jobs:
             exit 1
           fi
 
+      - name: Prepare private acceptance clone
+        if: steps.final_gate.outputs.gate == 'PASS'
+        id: acceptance_prepare
+        shell: bash
+        env:
+          RUNTIME_URL: ${{ steps.runtime_deploy.outputs.runtime_url }}
+        run: |
+          curl -fsSL --max-time 420 \
+            "$RUNTIME_URL?view=__runtime_gate&mode=acceptance_prepare&token=$RUNTIME_GATE_TOKEN" \
+            -o /tmp/acceptance-prepare.json
+          cat /tmp/acceptance-prepare.json | jq .
+          OK="$(jq -r '.ok // false' /tmp/acceptance-prepare.json)"
+          GATE="$(jq -r '.gate // "BLOCKED"' /tmp/acceptance-prepare.json)"
+          echo "ok=$OK" >> "$GITHUB_OUTPUT"
+          echo "gate=$GATE" >> "$GITHUB_OUTPUT"
+          echo "- Acceptance prepare: **$GATE**" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$OK" != "true" ] || [ "$GATE" != "PASS" ]; then exit 1; fi
+
+      - name: Run clone core acceptance
+        if: steps.acceptance_prepare.outputs.gate == 'PASS'
+        id: acceptance_core
+        shell: bash
+        env:
+          RUNTIME_URL: ${{ steps.runtime_deploy.outputs.runtime_url }}
+        run: |
+          curl -fsSL --max-time 420 \
+            "$RUNTIME_URL?view=__runtime_gate&mode=acceptance_core&token=$RUNTIME_GATE_TOKEN" \
+            -o /tmp/acceptance-core.json
+          cat /tmp/acceptance-core.json | jq .
+          OK="$(jq -r '.ok // false' /tmp/acceptance-core.json)"
+          GATE="$(jq -r '.gate // "BLOCKED"' /tmp/acceptance-core.json)"
+          FAILED="$(jq -r '.failed_test // ""' /tmp/acceptance-core.json)"
+          echo "ok=$OK" >> "$GITHUB_OUTPUT"
+          echo "gate=$GATE" >> "$GITHUB_OUTPUT"
+          {
+            echo "- Core acceptance: **$GATE**"
+            if [ -n "$FAILED" ]; then echo "- Failed test: **$FAILED**"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$OK" != "true" ] || [ "$GATE" != "PASS" ]; then exit 1; fi
+
+      - name: Run backup and restore-on-clone acceptance
+        if: steps.acceptance_core.outputs.gate == 'PASS'
+        id: acceptance_restore
+        shell: bash
+        env:
+          RUNTIME_URL: ${{ steps.runtime_deploy.outputs.runtime_url }}
+        run: |
+          curl -fsSL --max-time 420 \
+            "$RUNTIME_URL?view=__runtime_gate&mode=acceptance_restore&token=$RUNTIME_GATE_TOKEN" \
+            -o /tmp/acceptance-restore.json
+          cat /tmp/acceptance-restore.json | jq .
+          OK="$(jq -r '.ok // false' /tmp/acceptance-restore.json)"
+          GATE="$(jq -r '.gate // "BLOCKED"' /tmp/acceptance-restore.json)"
+          FAILED="$(jq -r '.failed_test // ""' /tmp/acceptance-restore.json)"
+          echo "ok=$OK" >> "$GITHUB_OUTPUT"
+          echo "gate=$GATE" >> "$GITHUB_OUTPUT"
+          {
+            echo "- Backup/restore-on-clone: **$GATE**"
+            if [ -n "$FAILED" ]; then echo "- Failed test: **$FAILED**"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$OK" != "true" ] || [ "$GATE" != "PASS" ]; then exit 1; fi
+
+      - name: Cleanup acceptance clone
+        if: always() && steps.final_gate.outputs.gate == 'PASS'
+        id: acceptance_cleanup
+        shell: bash
+        env:
+          RUNTIME_URL: ${{ steps.runtime_deploy.outputs.runtime_url }}
+        run: |
+          curl -fsSL --max-time 120 \
+            "$RUNTIME_URL?view=__runtime_gate&mode=acceptance_cleanup&token=$RUNTIME_GATE_TOKEN" \
+            -o /tmp/acceptance-cleanup.json
+          cat /tmp/acceptance-cleanup.json | jq .
+          OK="$(jq -r '.ok // false' /tmp/acceptance-cleanup.json)"
+          GATE="$(jq -r '.gate // "BLOCKED"' /tmp/acceptance-cleanup.json)"
+          echo "ok=$OK" >> "$GITHUB_OUTPUT"
+          echo "gate=$GATE" >> "$GITHUB_OUTPUT"
+          echo "- Acceptance cleanup: **$GATE**" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$OK" != "true" ] || [ "$GATE" != "PASS" ]; then exit 1; fi
+
       - name: Upload runtime gate evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -203,6 +283,10 @@ jobs:
             /tmp/runtime-gate-initial.json
             /tmp/credential-provision-result.json
             /tmp/runtime-gate-result.json
+            /tmp/acceptance-prepare.json
+            /tmp/acceptance-core.json
+            /tmp/acceptance-restore.json
+            /tmp/acceptance-cleanup.json
           if-no-files-found: ignore
           retention-days: 30
 
@@ -220,7 +304,7 @@ jobs:
           npx clasp push -f
 
       - name: Discover or create production deployment
-        if: steps.final_gate.outputs.gate == 'PASS'
+        if: success() && steps.final_gate.outputs.gate == 'PASS' && steps.acceptance_prepare.outputs.gate == 'PASS' && steps.acceptance_core.outputs.gate == 'PASS' && steps.acceptance_restore.outputs.gate == 'PASS' && steps.acceptance_cleanup.outputs.gate == 'PASS'
         id: production
         working-directory: apps/danh-ba-mttq-cao-bang
         shell: bash
@@ -259,7 +343,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Public Web App smoke test
-        if: steps.final_gate.outputs.gate == 'PASS'
+        if: success() && steps.production.outputs.url != ''
         shell: bash
         env:
           WEBAPP_URL: ${{ steps.production.outputs.url }}
