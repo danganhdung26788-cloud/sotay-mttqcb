@@ -8,8 +8,8 @@
 - `@google/clasp`: 3.4.1.
 - Phase 4 status: **RUNTIME PASS**.
 - Production Web App: https://script.google.com/macros/s/AKfycbwmVqvqZoelpQb30PMsczG7b1Zr3tC724ZVjWq41oLplK-oMSAKlibCy6QkojZEAyHo/exec
-- Accepted runtime commit: `a8f846bb25fdc5923c85526da779ebaf9c98df5a`.
-- Accepted runtime run: `36094022615`.
+- Accepted runtime commit: `4d0dbc71cd750a756fc503dde0dedeaa51ad8e5c`.
+- Accepted runtime run: `36096260212`.
 - Không lưu credential/token/mật khẩu trong repository hoặc GitHub log.
 
 ## Cơ chế Phase 4A/4B/4C
@@ -56,6 +56,8 @@ Sau khi thay đổi được merge vào `main`, workflow tự thực hiện:
 - Clone cleanup: PASS.
 - Production read-back sau acceptance: không đổi baseline, level-3 test = 0.
 - Public/admin production smoke: PASS.
-- Public UI V2 production: PASS; backend/database/admin portal unchanged.
+- Public UI V2 production: PASS.
+- Ban/Nhóm scoped CRUD + contact assignment + inactive guard: PASS.
+- Public level/position filters + Admin entry: PASS.
 
 Phase 4 hiện ở trạng thái **RUNTIME PASS**.
