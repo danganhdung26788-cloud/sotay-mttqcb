@@ -36,13 +36,14 @@
 <div id="adminView" class="admin-shell hidden">
   <header class="admin-topbar">
     <div><strong>Danh bạ MTTQ Cao Bằng</strong><span>Quản trị</span></div>
-    <div class="user-box"><span id="userLabel"></span><button id="logoutBtn" class="ghost">Đăng xuất</button></div>
+    <div class="user-box"><a class="ghost-link" href="?">← Danh bạ</a><span id="userLabel"></span><button id="logoutBtn" class="ghost">Đăng xuất</button></div>
   </header>
 
 
   <aside class="admin-nav">
     <button data-tab="dashboard" class="active">Tổng quan</button>
     <button data-tab="contacts">Cán bộ</button>
+    <button data-tab="groups">Ban / Nhóm</button>
     <button data-tab="level3">Thôn/xóm</button>
     <button data-tab="import">Import/Export</button>
     <button data-tab="users">Tài khoản</button>
@@ -63,9 +64,38 @@
         <button id="refreshContactsBtn">Lọc</button>
       </div>
       <div class="bulkbar"><span id="selectedCount">0 đã chọn</span><select id="moveTargetOrg"></select><button id="moveBtn">Chuyển đơn vị</button></div>
-      <div class="table-wrap"><table><thead><tr><th></th><th>Họ tên</th><th>Chức vụ</th><th>Đơn vị</th><th>SĐT</th><th>Public</th><th>Chất lượng</th><th>Thao tác</th></tr></thead><tbody id="contactTbody"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th></th><th>Họ tên</th><th>Chức vụ</th><th>Đơn vị</th><th>Ban/Nhóm</th><th>SĐT</th><th>Public</th><th>Chất lượng</th><th>Thao tác</th></tr></thead><tbody id="contactTbody"></tbody></table></div>
     </section>
 
+
+    <section id="tab-groups" class="tab-pane hidden">
+      <div class="pane-head">
+        <div><h2>Quản lý Ban / Nhóm / Hội</h2><p class="muted">Ban, Văn phòng, Hội, bộ phận trực thuộc một đơn vị. Đơn vị cấp tỉnh/xã/cấp 3 được quản lý riêng.</p></div>
+        <button id="addGroupBtn" class="primary">+ Thêm Ban/Nhóm</button>
+      </div>
+      <div class="toolbar group-toolbar">
+        <input id="groupSearch" placeholder="Tìm tên Ban/Nhóm">
+        <select id="groupOrgFilter"><option value="">Tất cả đơn vị</option></select>
+        <select id="groupTypeFilter">
+          <option value="">Tất cả loại</option>
+          <option value="PROVINCE_DEPARTMENT">Ban/Bộ phận cấp tỉnh</option>
+          <option value="ASSOCIATION">Hội/Tổ chức</option>
+          <option value="COMMUNE_GROUP">Ban/Bộ phận cấp xã</option>
+          <option value="LEVEL3_GROUP">Nhóm/Bộ phận cấp 3</option>
+          <option value="OTHER">Khác</option>
+        </select>
+        <select id="groupStatusFilter">
+          <option value="">Tất cả trạng thái</option>
+          <option value="ACTIVE">Đang dùng</option>
+          <option value="INACTIVE">Ngừng dùng</option>
+        </select>
+        <button id="refreshGroupsBtn">Lọc</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Tên Ban/Nhóm</th><th>Loại</th><th>Đơn vị chủ quản</th><th>Cán bộ</th><th>Trạng thái</th><th>Thứ tự</th><th>Thao tác</th></tr></thead>
+        <tbody id="groupTbody"></tbody>
+      </table></div>
+    </section>
 
     <section id="tab-level3" class="tab-pane hidden">
       <div class="pane-head"><h2>Quản lý cấp 3</h2><button id="addLevel3Btn" class="primary">+ Thêm thôn/xóm</button></div>
