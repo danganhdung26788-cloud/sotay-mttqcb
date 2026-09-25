@@ -166,13 +166,23 @@ if (!runtimeGateConfig.includes("__RUNTIME_GATE_TOKEN_SHA256__")) {
   failed = true;
 }
 const publicIndex = fs.readFileSync(path.join(src,'Index.html'),'utf8');
-for (const token of ['?view=admin','levelFilter','positionFilter','resetFiltersBtn']) {
+for (const token of ['<?= webAppUrl ?>?view=admin','levelFilter','positionFilter','resetFiltersBtn']) {
   if (!publicIndex.includes(token)) {
     console.error('PUBLIC_UI_FILTER_OR_ADMIN_ENTRY_MISSING', token);
     failed = true;
   }
 }
 const adminIndex = fs.readFileSync(path.join(src,'Admin.html'),'utf8');
+if (!adminIndex.includes('href="<?= webAppUrl ?>"')) {
+  console.error('ADMIN_PUBLIC_ABSOLUTE_LINK_MISSING');
+  failed = true;
+}
+const viewHelpers = fs.readFileSync(path.join(src,'ViewHelpers.gs'),'utf8');
+if (!viewHelpers.includes('ScriptApp.getService().getUrl()') ||
+    !viewHelpers.includes('template.webAppUrl')) {
+  console.error('WEB_APP_ABSOLUTE_URL_BINDING_MISSING');
+  failed = true;
+}
 for (const token of ['data-tab="groups"','groupTbody','addGroupBtn']) {
   if (!adminIndex.includes(token)) {
     console.error('ADMIN_GROUP_UI_MISSING', token);
