@@ -27,12 +27,15 @@
 - [x] `setupDatabase_()` PASS.
 - [x] `verifyDatabase_()` baseline PASS: 57 organizations / 56 communes / 466 contacts / 57 users / 56 UNIT_ADMIN.
 - [x] `runPhase4RegressionTests_().ok === true`.
-- [x] Phase 4A runtime-gate automation implemented on protected branch.
+- [x] Phase 4A runtime-gate automation merged to `main`.
+- [x] Automated credential-state result recorded: 57 pending / 57 empty hashes / 57 must-change.
+- [x] Phase 4B safe auto-provision implementation prepared on protected branch.
 
 ## Runtime gate / deployment
-- [ ] Phase 4A branch merged after CI PASS.
-- [ ] Automated credential-state result recorded.
-- [ ] Credential provisioning performed only if gate returns `REVIEW`.
+- [ ] Phase 4B branch merged after CI PASS.
+- [ ] Automated per-user credential bootstrap PASS.
+- [ ] Private Drive credential handoff file created and verified PRIVATE.
+- [ ] Final credential-state gate PASS.
 - [ ] Automated first production Web App deployment PASS.
 - [ ] Production deployment ID and Web App URL recorded by workflow.
 - [ ] Public/admin HTML smoke PASS.
