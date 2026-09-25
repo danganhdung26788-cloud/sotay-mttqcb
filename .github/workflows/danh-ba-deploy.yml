@@ -352,4 +352,6 @@ jobs:
           curl -fsSL --retry 8 --retry-all-errors --retry-delay 5 "$WEBAPP_URL?view=admin" -o /tmp/admin.html
           grep -qi "Danh bạ" /tmp/public.html
           grep -qi "Danh bạ" /tmp/admin.html
-          echo "- Public/admin HTML smoke: **PASS**" >> "$GITHUB_STEP_SUMMARY"
+          grep -Eq 'href="https://script\.google\.com/macros/s/[^"]+/exec\?view=admin"' /tmp/public.html
+          grep -Eq 'href="https://script\.google\.com/macros/s/[^"]+/exec"' /tmp/admin.html
+          echo "- Public/admin HTML + absolute navigation smoke: **PASS**" >> "$GITHUB_STEP_SUMMARY"
