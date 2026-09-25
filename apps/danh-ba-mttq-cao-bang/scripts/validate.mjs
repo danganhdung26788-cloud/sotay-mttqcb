@@ -9,7 +9,7 @@ const required = [
   'PublicDirectoryService.gs','ViewHelpers.gs','AdminPortalService.gs','ContactAdminService.gs',
   'OrganizationAdminService.gs','UserAdminService.gs','ImportExportService.gs','ImportPhase4Service.gs',
   'AuditQueryService.gs','AvatarService.gs','ReviewWorkflowService.gs','BackupService.gs',
-  'Phase4RegressionTest.gs','CredentialProvisionService.gs','RuntimeGateConfig.gs','RuntimeGateService.gs','Code.gs','Index.html','Styles.html','Client.html','Admin.html',
+  'Phase4RegressionTest.gs','CredentialProvisionService.gs','RuntimeGateConfig.gs','RuntimeGateService.gs','RuntimeAcceptanceService.gs','Code.gs','Index.html','Styles.html','Client.html','Admin.html',
   'AdminStyles.html','AdminClient.html','appsscript.json'
 ];
 
@@ -67,7 +67,9 @@ const requiredFunctions = [
   'adminUploadAvatar_','adminRemoveAvatar_',
   'listReviewRequests_','adminReviewRequest_',
   'adminCreateDatabaseBackup_','adminPreviewRestore_','adminRestoreOperationalData_',
-  'runtimeGateResponse_','runRuntimeBaselineGate_','runtimeProvisionPendingCredentials_','provisionPendingCredentials_'
+  'runtimeGateResponse_','runRuntimeBaselineGate_','runtimeProvisionPendingCredentials_','provisionPendingCredentials_',
+  'activeDbId_','withRuntimeDbOverride_',
+  'runtimeAcceptancePrepare_','runtimeAcceptanceCore_','runtimeAcceptanceRestore_','runtimeAcceptanceCleanup_'
 ];
 for (const fn of requiredFunctions) {
   const re = new RegExp('function\\s+' + fn + '\\s*\\(');
@@ -165,6 +167,20 @@ if (!runtimeGateConfig.includes("__RUNTIME_GATE_TOKEN_SHA256__")) {
 const codeEntry = fs.readFileSync(path.join(src,'Code.gs'),'utf8');
 if (!codeEntry.includes("view === '__runtime_gate'") || !codeEntry.includes('runtimeGateResponse_(e)')) {
   console.error('RUNTIME_GATE_ROUTE_MISSING');
+  failed = true;
+}
+
+const backupService = fs.readFileSync(path.join(src,'BackupService.gs'),'utf8');
+if (backupService.includes('DriveApp.getFileById(CONFIG.DB_ID)') ||
+    backupService.includes('source_db_id:CONFIG.DB_ID') ||
+    backupService.includes("String(r.source_db_id || '') === String(CONFIG.DB_ID)")) {
+  console.error('BACKUP_SERVICE_NOT_CLONE_SAFE');
+  failed = true;
+}
+const utilsSource = fs.readFileSync(path.join(src,'Utils.gs'),'utf8');
+if (!utilsSource.includes('RUNTIME_DB_OVERRIDE_ID_') ||
+    !utilsSource.includes('SpreadsheetApp.openById(activeDbId_())')) {
+  console.error('RUNTIME_DB_OVERRIDE_MISSING');
   failed = true;
 }
 
