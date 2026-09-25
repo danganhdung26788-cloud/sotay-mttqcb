@@ -9,63 +9,93 @@
 <body>
 <div id="app" class="app-shell">
   <header class="topbar">
-    <button id="mobileMenuBtn" class="icon-btn mobile-only" aria-label="Mở danh mục đơn vị">☰</button>
-    <div class="brand-mark">MT</div>
+    <button id="mobileMenuBtn" class="icon-btn mobile-only" type="button" aria-label="Mở danh mục đơn vị">☰</button>
+    <div class="brand-mark" aria-hidden="true">MT</div>
     <div class="brand-copy">
       <div class="eyebrow">ỦY BAN MTTQ VIỆT NAM TỈNH CAO BẰNG</div>
       <h1>DANH BẠ ĐIỆN THOẠI</h1>
     </div>
     <div class="topbar-meta desktop-only">
-      <span id="contactCountTop">— cán bộ</span><span>•</span><span>V<?= appVersion ?></span>
+      <span id="contactCountTop">— cán bộ</span>
     </div>
   </header>
 
-
   <section class="search-band">
     <div class="search-wrap">
-      <span class="search-icon">⌕</span>
+      <span class="search-icon" aria-hidden="true">⌕</span>
       <input id="globalSearch" type="search" autocomplete="off"
-        placeholder="Tìm theo họ tên, chức vụ, số điện thoại, đơn vị...">
+        placeholder="Tìm tên, chức vụ, số điện thoại, đơn vị…"
+        aria-label="Tìm kiếm danh bạ">
       <button id="clearSearch" class="clear-btn hidden" type="button">Xóa</button>
     </div>
-    <div class="quick-stats">
+    <button id="filterToggleBtn" class="filter-btn" type="button" aria-expanded="false">
+      <span aria-hidden="true">⌄</span>
+      <span>Bộ lọc</span>
+      <span id="filterCountBadge" class="filter-count hidden">0</span>
+    </button>
+    <div class="quick-stats desktop-only">
       <span id="statUnits">— đơn vị</span>
       <span id="statContacts">— cán bộ</span>
     </div>
   </section>
 
-
   <main class="main-layout">
     <aside id="sidebar" class="sidebar">
       <div class="sidebar-head">
-        <div><div class="section-label">CƠ CẤU 3 CẤP</div><strong>Đơn vị</strong></div>
-        <button id="closeSidebarBtn" class="icon-btn mobile-only" aria-label="Đóng">✕</button>
+        <div>
+          <div class="section-label">CƠ CẤU 3 CẤP</div>
+          <strong>Đơn vị</strong>
+        </div>
+        <div class="sidebar-head-actions">
+          <button id="collapseSidebarBtn" class="sidebar-collapse-btn desktop-only" type="button" aria-label="Thu gọn danh sách đơn vị">‹</button>
+          <button id="closeSidebarBtn" class="icon-btn mobile-only" type="button" aria-label="Đóng">✕</button>
+        </div>
       </div>
       <div id="orgTree" class="org-tree"></div>
     </aside>
 
-
     <section class="content-panel">
+      <div class="content-toolbar">
+        <button id="showAllBtn" class="back-link" type="button">
+          <span aria-hidden="true">←</span>
+          <span>Tất cả đơn vị</span>
+        </button>
+        <div class="view-switch" role="group" aria-label="Chế độ hiển thị">
+          <button id="viewCardBtn" class="view-btn active" type="button" data-view="card" aria-pressed="true">▦ Thẻ</button>
+          <button id="viewListBtn" class="view-btn" type="button" data-view="list" aria-pressed="false">☰ Danh sách</button>
+        </div>
+      </div>
+
       <div class="content-head">
         <div>
           <div id="breadcrumb" class="breadcrumb">Danh bạ</div>
           <h2 id="currentTitle">Đang tải dữ liệu...</h2>
+          <div id="currentMeta" class="current-meta"></div>
           <p id="currentSubtitle" class="muted"></p>
         </div>
-        <button id="showAllBtn" class="secondary-btn" type="button">Tất cả đơn vị</button>
       </div>
 
+      <div id="filterPanel" class="filter-panel">
+        <div id="groupChips" class="group-chips"></div>
+        <button id="groupMoreBtn" class="group-more-btn hidden" type="button" aria-expanded="false">Xem thêm</button>
+      </div>
 
-      <div id="groupChips" class="group-chips"></div>
-      <div id="resultSummary" class="result-summary"></div>
-
+      <div class="results-bar">
+        <div id="resultSummary" class="result-summary"></div>
+        <div class="mobile-stats mobile-only">
+          <span id="mobileStatUnits">— đơn vị</span>
+          <span id="mobileStatContacts">— cán bộ</span>
+        </div>
+      </div>
 
       <div id="loadingState" class="state-card">
-        <div class="spinner"></div><strong>Đang tải danh bạ...</strong>
+        <div class="spinner"></div>
+        <strong>Đang tải danh bạ...</strong>
         <span>Vui lòng chờ trong giây lát.</span>
       </div>
       <div id="errorState" class="state-card hidden">
-        <strong>Không tải được dữ liệu</strong><span id="errorMessage">Đã xảy ra lỗi.</span>
+        <strong>Không tải được dữ liệu</strong>
+        <span id="errorMessage">Đã xảy ra lỗi.</span>
         <button id="retryBtn" class="primary-btn" type="button">Thử lại</button>
       </div>
       <div id="emptyState" class="state-card hidden">
@@ -76,9 +106,9 @@
     </section>
   </main>
 
-
   <footer class="footer">
-    <span>Danh bạ MTTQ tỉnh Cao Bằng</span><span id="lastUpdated"></span>
+    <span>Danh bạ MTTQ tỉnh Cao Bằng</span>
+    <span id="lastUpdated"></span>
   </footer>
   <div id="sidebarBackdrop" class="sidebar-backdrop hidden"></div>
 </div>
