@@ -7,7 +7,7 @@ const required = [
   'Config.gs','Utils.gs','AuditService.gs','HardeningService.gs','SettingsService.gs','AuthService.gs',
   'PermissionService.gs','OrganizationService.gs','ContactService.gs','DatabaseSetup.gs',
   'PublicDirectoryService.gs','ViewHelpers.gs','AdminPortalService.gs','ContactAdminService.gs',
-  'OrganizationAdminService.gs','UserAdminService.gs','ImportExportService.gs','ImportPhase4Service.gs',
+  'OrganizationAdminService.gs','GroupAdminService.gs','UserAdminService.gs','ImportExportService.gs','ImportPhase4Service.gs',
   'AuditQueryService.gs','AvatarService.gs','ReviewWorkflowService.gs','BackupService.gs',
   'Phase4RegressionTest.gs','CredentialProvisionService.gs','RuntimeGateConfig.gs','RuntimeGateService.gs','RuntimeAcceptanceService.gs','Code.gs','Index.html','Styles.html','Client.html','Admin.html',
   'AdminStyles.html','AdminClient.html','appsscript.json'
@@ -64,6 +64,7 @@ const requiredFunctions = [
   'verifyDatabase_','setupDatabase_','runPhase4RegressionTests_','runPhase4ScopeSmokeTest_',
   'adminLogin_','adminBootstrap_','adminChangePasswordPhase4_',
   'adminSaveContactPhase4_','adminSetContactStatusPhase4_',
+  'listAdminGroups_','adminCreateGroup_','adminUpdateGroup_','adminSetGroupStatus_',
   'adminUploadAvatar_','adminRemoveAvatar_',
   'listReviewRequests_','adminReviewRequest_',
   'adminCreateDatabaseBackup_','adminPreviewRestore_','adminRestoreOperationalData_',
