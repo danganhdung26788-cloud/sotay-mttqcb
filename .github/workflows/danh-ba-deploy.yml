@@ -1,12 +1,17 @@
-name: Danh ba MTTQ - Deploy Apps Script
+name: Danh ba MTTQ - Runtime Gate + Deploy
 
 on:
+  push:
+    branches: ["main"]
+    paths:
+      - "apps/danh-ba-mttq-cao-bang/**"
+      - ".github/workflows/danh-ba-deploy.yml"
   workflow_dispatch:
     inputs:
       description:
         description: "Release note"
         required: false
-        default: "Manual deploy from GitHub"
+        default: "Manual runtime gate from GitHub"
 
 permissions:
   contents: read
@@ -16,22 +21,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  runtime-gate:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
-    env:
-      CLASP_DEPLOYMENT_ID: ${{ secrets.CLASP_DEPLOYMENT_ID }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Verify source exists
-        shell: bash
-        run: |
-          test -f "apps/danh-ba-mttq-cao-bang/scripts/validate.mjs" || (echo "Missing Danh ba source" && exit 1)
-          test -d "apps/danh-ba-mttq-cao-bang/src" || (echo "Missing Danh ba src/" && exit 1)
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -65,21 +62,153 @@ jobs:
           printf '%s' "$CLASP_JSON" > apps/danh-ba-mttq-cao-bang/.clasp.json
           chmod 600 ~/.clasprc.json apps/danh-ba-mttq-cao-bang/.clasp.json
 
-      - name: Push source to Apps Script
+      - name: Create one-time runtime gate token
+        shell: bash
+        run: |
+          TOKEN="$(openssl rand -hex 32)"
+          echo "::add-mask::$TOKEN"
+          HASH="$(printf '%s' "$TOKEN" | sha256sum | awk '{print $1}')"
+          echo "RUNTIME_GATE_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "RUNTIME_GATE_HASH=$HASH" >> "$GITHUB_ENV"
+
+      - name: Enable runtime gate in transient workspace
+        working-directory: apps/danh-ba-mttq-cao-bang
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = 'src/RuntimeGateConfig.gs';
+          const src = fs.readFileSync(p,'utf8');
+          const hash = process.env.RUNTIME_GATE_HASH;
+          if (!/^[a-f0-9]{64}$/.test(hash || '')) throw new Error('Invalid runtime gate hash');
+          if (!src.includes('__RUNTIME_GATE_TOKEN_SHA256__')) throw new Error('Runtime gate placeholder missing');
+          fs.writeFileSync(p, src.replace('__RUNTIME_GATE_TOKEN_SHA256__', hash));
+          NODE
+
+      - name: Push transient runtime-gate source
         working-directory: apps/danh-ba-mttq-cao-bang
         run: npx clasp push -f
 
-      - name: Update existing Web App deployment
-        if: env.CLASP_DEPLOYMENT_ID != ''
+      - name: Create temporary runtime-gate deployment
+        id: runtime_deploy
         working-directory: apps/danh-ba-mttq-cao-bang
+        shell: bash
         run: |
-          npx clasp create-deployment \
-            --deploymentId "$CLASP_DEPLOYMENT_ID" \
-            --description "${{ inputs.description }} | GitHub ${GITHUB_SHA}"
+          OUT="$(npx clasp create-deployment --description "DANH_BA_RUNTIME_GATE ${GITHUB_SHA}" --json)"
+          printf '%s' "$OUT" > /tmp/runtime-deployment.json
+          ID="$(node - <<'NODE'
+          const fs=require('fs');
+          const x=JSON.parse(fs.readFileSync('/tmp/runtime-deployment.json','utf8'));
+          const id=x.deploymentId || (x.result && x.result.deploymentId) || (x.deployment && x.deployment.deploymentId);
+          if(!id) throw new Error('deploymentId not found');
+          process.stdout.write(String(id));
+          NODE
+          )"
+          echo "deployment_id=$ID" >> "$GITHUB_OUTPUT"
+          echo "runtime_url=https://script.google.com/macros/s/$ID/exec" >> "$GITHUB_OUTPUT"
 
-      - name: First-deployment gate
-        if: env.CLASP_DEPLOYMENT_ID == ''
+      - name: Execute baseline and credential gate
+        id: gate
+        shell: bash
+        env:
+          RUNTIME_URL: ${{ steps.runtime_deploy.outputs.runtime_url }}
         run: |
-          echo "Source push completed."
-          echo "Create the first Web App deployment manually in Apps Script."
-          echo "Then save its deployment ID as CLASP_DEPLOYMENT_ID."
+          curl -fsSL --retry 8 --retry-all-errors --retry-delay 5             "$RUNTIME_URL?view=__runtime_gate&token=$RUNTIME_GATE_TOKEN"             -o /tmp/runtime-gate-result.json
+
+          cat /tmp/runtime-gate-result.json | jq .
+
+          GATE="$(jq -r '.gate // "BLOCKED"' /tmp/runtime-gate-result.json)"
+          OK="$(jq -r '.ok // false' /tmp/runtime-gate-result.json)"
+          echo "gate=$GATE" >> "$GITHUB_OUTPUT"
+          echo "ok=$OK" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Danh bạ runtime gate"
+            echo ""
+            echo "- Gate: **$GATE**"
+            echo "- Database baseline: $(jq -c '.database // {}' /tmp/runtime-gate-result.json)"
+            echo "- Credential state: $(jq -c '.credentials // {}' /tmp/runtime-gate-result.json)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$GATE" = "BLOCKED" ] || [ "$OK" != "true" ]; then
+            exit 1
+          fi
+
+      - name: Upload runtime gate evidence
+        if: always() && hashFiles('/tmp/runtime-gate-result.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: danh-ba-runtime-gate-${{ github.run_id }}
+          path: /tmp/runtime-gate-result.json
+          retention-days: 30
+
+      - name: Remove temporary deployment
+        if: always() && steps.runtime_deploy.outputs.deployment_id != ''
+        working-directory: apps/danh-ba-mttq-cao-bang
+        run: npx clasp delete-deployment "${{ steps.runtime_deploy.outputs.deployment_id }}" || true
+
+      - name: Restore clean source on Apps Script HEAD
+        if: always()
+        working-directory: apps/danh-ba-mttq-cao-bang
+        shell: bash
+        run: |
+          git checkout -- src/RuntimeGateConfig.gs
+          npx clasp push -f
+
+      - name: Discover or create production deployment
+        if: steps.gate.outputs.gate == 'PASS'
+        id: production
+        working-directory: apps/danh-ba-mttq-cao-bang
+        shell: bash
+        run: |
+          npx clasp list-deployments --json > /tmp/deployments.json
+          EXISTING_ID="$(node - <<'NODE'
+          const fs=require('fs');
+          const x=JSON.parse(fs.readFileSync('/tmp/deployments.json','utf8'));
+          const list=Array.isArray(x) ? x : (x.deployments || (x.result && x.result.deployments) || []);
+          const item=list.find(d => String((d.deploymentConfig && d.deploymentConfig.description) || d.description || '').startsWith('DANH_BA_PRODUCTION'));
+          process.stdout.write(item && item.deploymentId ? String(item.deploymentId) : '');
+          NODE
+          )"
+
+          DESC="DANH_BA_PRODUCTION | GitHub ${GITHUB_SHA}"
+          if [ -n "$EXISTING_ID" ]; then
+            OUT="$(npx clasp create-deployment --deploymentId "$EXISTING_ID" --description "$DESC" --json)"
+            ID="$EXISTING_ID"
+          else
+            OUT="$(npx clasp create-deployment --description "$DESC" --json)"
+            printf '%s' "$OUT" > /tmp/production-deployment.json
+            ID="$(node - <<'NODE'
+          const fs=require('fs');
+          const x=JSON.parse(fs.readFileSync('/tmp/production-deployment.json','utf8'));
+          const id=x.deploymentId || (x.result && x.result.deploymentId) || (x.deployment && x.deployment.deploymentId);
+          if(!id) throw new Error('production deploymentId not found');
+          process.stdout.write(String(id));
+          NODE
+            )"
+          fi
+
+          echo "deployment_id=$ID" >> "$GITHUB_OUTPUT"
+          echo "url=https://script.google.com/macros/s/$ID/exec" >> "$GITHUB_OUTPUT"
+          {
+            echo "- Production deployment: **$ID**"
+            echo "- Web App URL: https://script.google.com/macros/s/$ID/exec"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Public Web App smoke test
+        if: steps.gate.outputs.gate == 'PASS'
+        shell: bash
+        env:
+          WEBAPP_URL: ${{ steps.production.outputs.url }}
+        run: |
+          curl -fsSL --retry 8 --retry-all-errors --retry-delay 5 "$WEBAPP_URL" -o /tmp/public.html
+          curl -fsSL --retry 8 --retry-all-errors --retry-delay 5 "$WEBAPP_URL?view=admin" -o /tmp/admin.html
+          grep -qi "Danh bạ" /tmp/public.html
+          grep -qi "Danh bạ" /tmp/admin.html
+          echo "- Public/admin HTML smoke: **PASS**" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Credential review gate
+        if: steps.gate.outputs.gate == 'REVIEW'
+        run: |
+          echo "Credential provisioning is still required. Production deployment was not changed." >> "$GITHUB_STEP_SUMMARY"
+          echo "No password, hash, salt, token or secret was printed."
