@@ -3,11 +3,11 @@ function isTruthy_(value) {
 }
 
 function publicCacheMetaKey_() {
-  return 'PUBLIC_DIRECTORY_V11_META';
+  return 'PUBLIC_DIRECTORY_V11_META:' + activeDbId_();
 }
 
 function publicCacheChunkKey_(index) {
-  return 'PUBLIC_DIRECTORY_V11_' + index;
+  return 'PUBLIC_DIRECTORY_V11_' + activeDbId_() + ':' + index;
 }
 
 function getPublicCache_() {
