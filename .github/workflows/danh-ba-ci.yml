@@ -6,6 +6,7 @@ on:
     paths:
       - "apps/danh-ba-mttq-cao-bang/**"
       - ".github/workflows/danh-ba-ci.yml"
+      - ".github/workflows/danh-ba-deploy.yml"
   push:
     branches: ["main", "develop"]
     paths:
