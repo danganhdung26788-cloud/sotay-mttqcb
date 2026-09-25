@@ -2,22 +2,25 @@
 
 - Project: Danh bạ MTTQ tỉnh Cao Bằng
 - Version: 1.1.0
-- Phase: **4 BUILD READY — GitHub hardened; runtime gate pending**
+- Phase: **4 RUNTIME PASS**
 - Source import: VERIFIED
 - Runtime source path: `apps/danh-ba-mttq-cao-bang/src/`
 - Database ID: `1E1pOxwBiQI4GDehXrYYghwULUg6pGZhbILXEOs-vIcY`
-- Windows auth helper: `scripts/setup-google-auth.ps1`
-- Codex runtime handoff: `CODEX_HANDOFF.md`
-- Codex takeover prompt: `CODEX_PROMPT.md`
-- GitHub issue: #4 — Codex handoff: finish Danh bạ Phase 4 runtime gate
+- Production Web App: https://script.google.com/macros/s/AKfycbwmVqvqZoelpQb30PMsczG7b1Zr3tC724ZVjWq41oLplK-oMSAKlibCy6QkojZEAyHo/exec
+- Accepted runtime commit: `eaaef4533f4a82ea8f3f9eb627c06270b3001617`
+- Accepted runtime workflow: `Danh ba MTTQ - Runtime Gate + Deploy`, run `36085635653`
 - Public Apps Script server surface: **ONLY** `doGet`, `publicApi`, `adminApi`
-- Server-surface hardening commit: `42d10c7835678d92d50a57ec0aea03c6ae7dabf8`
-- Hardening workflow result: PASS
-- Hardening validator result: PASS
-- Web App manifest: configured
-- ZIP source baseline SHA-256: `e00de66d5c30a0ae4dbcefc88fbbd9a7cec725ae21e2437d4f1114cae734ad5f`
-- Deployment gate remaining: Google Apps Script OAuth/project creation, source push, runtime regression, credential provisioning if pending, test Web App, acceptance tests, backup/restore-on-clone.
+- OAuth/clasp source push: PASS
+- Runtime baseline/regression: PASS
+- Credential bootstrap: PASS — 57/57 `PROVISIONED`, 57/57 `must_change_password=TRUE`
+- Phase 4C clone-only acceptance: PASS
+- Backup/restore-on-clone: PASS
+- Acceptance clone cleanup: PASS
+- Production public/admin HTML smoke: PASS
+- Production read-back after acceptance: 57 organizations / 56 communes / 0 level-3 test rows / 466 contacts / 57 users / 56 UNIT_ADMIN
 
 ## Current conclusion
 
-All work that can be completed safely through the GitHub connector is prepared. **Do not mark Phase 4 RUNTIME PASS yet.** The next execution environment must have a real Google Apps Script runtime and user OAuth authorization.
+Phase 4 đã hoàn tất runtime gate và acceptance. Production database không được dùng làm restore target thử nghiệm; mutation acceptance chạy trên private clone và đã được cleanup trước khi production deployment được cập nhật.
+
+Trạng thái chính thức: **RUNTIME PASS**.
