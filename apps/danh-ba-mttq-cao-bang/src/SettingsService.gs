@@ -1,6 +1,6 @@
 function settingsMap_(forceRefresh) {
   const cache = CacheService.getScriptCache();
-  const key = 'SETTINGS_V11';
+  const key = 'SETTINGS_V11:' + activeDbId_();
   if (!forceRefresh) {
     const cached = cache.get(key);
     if (cached) return JSON.parse(cached);
@@ -26,5 +26,5 @@ function settingInt_(key, fallback) {
   return Number.isFinite(n) ? n : Number(fallback || 0);
 }
 function invalidateSettingsCache_() {
-  CacheService.getScriptCache().remove('SETTINGS_V11');
+  CacheService.getScriptCache().remove('SETTINGS_V11:' + activeDbId_());
 }
