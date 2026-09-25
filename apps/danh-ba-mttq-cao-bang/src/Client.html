@@ -4,9 +4,12 @@
     data:null,
     selectedOrgId:null,
     selectedGroupId:'',
+    selectedLevel:'',
+    selectedPosition:'',
     search:'',
     expanded:new Set(),
     groupsExpanded:false,
+    filterOpen:false,
     viewMode:localStorage.getItem('danhba:view')==='list'?'list':'card',
     sidebarCollapsed:localStorage.getItem('danhba:sidebar')==='collapsed'
   };
@@ -16,7 +19,7 @@
     empty:$('emptyState'),errorMessage:$('errorMessage'),search:$('globalSearch'),clear:$('clearSearch'),
     title:$('currentTitle'),subtitle:$('currentSubtitle'),meta:$('currentMeta'),breadcrumb:$('breadcrumb'),
     groups:$('groupChips'),filterPanel:$('filterPanel'),groupMore:$('groupMoreBtn'),filterToggle:$('filterToggleBtn'),
-    filterCount:$('filterCountBadge'),summary:$('resultSummary'),statUnits:$('statUnits'),statContacts:$('statContacts'),
+    filterCount:$('filterCountBadge'),levelFilter:$('levelFilter'),positionFilter:$('positionFilter'),resetFilters:$('resetFiltersBtn'),summary:$('resultSummary'),statUnits:$('statUnits'),statContacts:$('statContacts'),
     mobileStatUnits:$('mobileStatUnits'),mobileStatContacts:$('mobileStatContacts'),countTop:$('contactCountTop'),
     lastUpdated:$('lastUpdated'),sidebar:$('sidebar'),backdrop:$('sidebarBackdrop'),
     collapseSidebar:$('collapseSidebarBtn'),viewCard:$('viewCardBtn'),viewList:$('viewListBtn')
@@ -84,14 +87,29 @@
     return state.data.groups.filter(g=>g.org_id===state.selectedOrgId);
   }
 
+  function activeFilterCount(){
+    return [state.selectedGroupId,state.selectedLevel,state.selectedPosition].filter(Boolean).length;
+  }
+
+  function updateFilterUi(){
+    const count=activeFilterCount();
+    if(count){
+      el.filterCount.textContent=String(count);
+      el.filterCount.classList.remove('hidden');
+    }else{
+      el.filterCount.classList.add('hidden');
+    }
+    el.filterPanel.classList.toggle('advanced-open',state.filterOpen);
+    el.filterToggle.setAttribute('aria-expanded',String(state.filterOpen));
+  }
+
   function renderGroups(){
     const groups=currentGroups();
     if(!groups.length){
       el.groups.innerHTML='';
       el.groupMore.classList.add('hidden');
-      el.filterCount.classList.add('hidden');
-      el.filterPanel.classList.remove('expanded');
-      el.filterToggle.setAttribute('aria-expanded','false');
+      el.filterPanel.classList.remove('groups-expanded');
+      updateFilterUi();
       return;
     }
     const visibleLimit=6;
@@ -105,18 +123,26 @@
     el.groupMore.classList.toggle('hidden',!hasOverflow);
     el.groupMore.textContent=state.groupsExpanded?'Thu gọn':'Xem thêm';
     el.groupMore.setAttribute('aria-expanded',String(state.groupsExpanded));
-    el.filterPanel.classList.toggle('expanded',state.groupsExpanded);
-    el.filterToggle.setAttribute('aria-expanded',String(state.groupsExpanded));
-    if(state.selectedGroupId){
-      el.filterCount.textContent='1';
-      el.filterCount.classList.remove('hidden');
-    }else{
-      el.filterCount.classList.add('hidden');
-    }
+    el.filterPanel.classList.toggle('groups-expanded',state.groupsExpanded);
+    updateFilterUi();
     el.groups.querySelectorAll('[data-group]').forEach(btn=>btn.addEventListener('click',()=>{
       state.selectedGroupId=btn.dataset.group||'';
       renderGroups();updateHeading();renderContacts();
     }));
+  }
+
+  function renderPositionOptions(){
+    const byKey=new Map();
+    (state.data.contacts||[]).forEach(c=>{
+      const label=String(c.position||'').trim(),key=normalize(label);
+      if(label&&!byKey.has(key))byKey.set(key,label);
+    });
+    const rows=[...byKey.entries()].sort((a,b)=>a[1].localeCompare(b[1],'vi'));
+    el.positionFilter.innerHTML='<option value="">Tất cả chức vụ</option>'+rows.map(([key,label])=>
+      '<option value="'+esc(key)+'">'+esc(label)+'</option>'
+    ).join('');
+    el.positionFilter.value=state.selectedPosition;
+    el.levelFilter.value=state.selectedLevel;
   }
 
   function descendantIds(id){
@@ -143,6 +169,15 @@
       rows=rows.filter(c=>allowed.has(c.org_id));
     }
     if(state.selectedGroupId)rows=rows.filter(c=>c.group_id===state.selectedGroupId);
+    if(state.selectedLevel){
+      rows=rows.filter(c=>{
+        const org=orgById(c.org_id);
+        return org&&String(org.level)===String(state.selectedLevel);
+      });
+    }
+    if(state.selectedPosition){
+      rows=rows.filter(c=>normalize(c.position)===state.selectedPosition);
+    }
     return rows.sort((a,b)=>(a.sort_order||9999)-(b.sort_order||9999)||String(a.full_name).localeCompare(String(b.full_name),'vi'));
   }
 
@@ -250,7 +285,7 @@
       el.countTop.textContent=contacts;
       el.lastUpdated.textContent=data.generated_at?'Cập nhật: '+data.generated_at:'';
       setSidebarCollapsed(state.sidebarCollapsed);
-      renderTree();renderGroups();updateHeading();renderContacts();applyViewMode();
+      renderPositionOptions();renderTree();renderGroups();updateHeading();renderContacts();applyViewMode();
     }catch(err){
       el.loading.classList.add('hidden');el.error.classList.remove('hidden');
       el.errorMessage.textContent=err&&err.message?err.message:String(err||'Không xác định');
@@ -275,9 +310,18 @@
     state.groupsExpanded=!state.groupsExpanded;renderGroups();
   });
   el.filterToggle.addEventListener('click',()=>{
-    if(!currentGroups().length)return;
-    state.groupsExpanded=!state.groupsExpanded;renderGroups();
-    el.filterPanel.scrollIntoView({behavior:'smooth',block:'nearest'});
+    state.filterOpen=!state.filterOpen;updateFilterUi();
+    if(state.filterOpen)el.filterPanel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+  el.levelFilter.addEventListener('change',()=>{
+    state.selectedLevel=el.levelFilter.value;updateFilterUi();updateHeading();renderContacts();
+  });
+  el.positionFilter.addEventListener('change',()=>{
+    state.selectedPosition=el.positionFilter.value;updateFilterUi();updateHeading();renderContacts();
+  });
+  el.resetFilters.addEventListener('click',()=>{
+    state.selectedGroupId='';state.selectedLevel='';state.selectedPosition='';state.groupsExpanded=false;
+    el.levelFilter.value='';el.positionFilter.value='';renderGroups();updateHeading();renderContacts();
   });
   el.viewCard.addEventListener('click',()=>setViewMode('card'));
   el.viewList.addEventListener('click',()=>setViewMode('list'));
