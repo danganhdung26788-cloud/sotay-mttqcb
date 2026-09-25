@@ -110,13 +110,73 @@ jobs:
           echo "deployment_id=$ID" >> "$GITHUB_OUTPUT"
           echo "runtime_url=https://script.google.com/macros/s/$ID/exec" >> "$GITHUB_OUTPUT"
 
-      - name: Execute baseline and credential gate
+      - name: Execute initial baseline and credential gate
         id: gate
         shell: bash
         env:
           RUNTIME_URL: ${{ steps.runtime_deploy.outputs.runtime_url }}
         run: |
-          curl -fsSL --retry 8 --retry-all-errors --retry-delay 5             "$RUNTIME_URL?view=__runtime_gate&token=$RUNTIME_GATE_TOKEN"             -o /tmp/runtime-gate-result.json
+          curl -fsSL --retry 8 --retry-all-errors --retry-delay 5             "$RUNTIME_URL?view=__runtime_gate&mode=baseline&token=$RUNTIME_GATE_TOKEN"             -o /tmp/runtime-gate-initial.json
+
+          cat /tmp/runtime-gate-initial.json | jq .
+
+          GATE="$(jq -r '.gate // "BLOCKED"' /tmp/runtime-gate-initial.json)"
+          OK="$(jq -r '.ok // false' /tmp/runtime-gate-initial.json)"
+          echo "gate=$GATE" >> "$GITHUB_OUTPUT"
+          echo "ok=$OK" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Danh bạ runtime gate"
+            echo ""
+            echo "- Initial gate: **$GATE**"
+            echo "- Database baseline: $(jq -c '.database // {}' /tmp/runtime-gate-initial.json)"
+            echo "- Credential state before bootstrap: $(jq -c '.credentials // {}' /tmp/runtime-gate-initial.json)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$GATE" = "BLOCKED" ] || [ "$OK" != "true" ]; then
+            exit 1
+          fi
+
+      - name: Provision pending credentials automatically
+        if: steps.gate.outputs.gate == 'REVIEW'
+        id: provision
+        shell: bash
+        env:
+          RUNTIME_URL: ${{ steps.runtime_deploy.outputs.runtime_url }}
+        run: |
+          curl -fsSL --retry 3 --retry-all-errors --retry-delay 5             "$RUNTIME_URL?view=__runtime_gate&mode=provision&token=$RUNTIME_GATE_TOKEN"             -o /tmp/credential-provision-result.json
+
+          cat /tmp/credential-provision-result.json | jq .
+
+          OK="$(jq -r '.ok // false' /tmp/credential-provision-result.json)"
+          GATE="$(jq -r '.gate // "BLOCKED"' /tmp/credential-provision-result.json)"
+          COUNT="$(jq -r '.provision.count // 0' /tmp/credential-provision-result.json)"
+          FILE="$(jq -r '.provision.handoff_file_name // ""' /tmp/credential-provision-result.json)"
+          echo "ok=$OK" >> "$GITHUB_OUTPUT"
+          echo "gate=$GATE" >> "$GITHUB_OUTPUT"
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "handoff_file_name=$FILE" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "- Credential bootstrap: **$GATE**"
+            echo "- Accounts provisioned: **$COUNT**"
+            if [ -n "$FILE" ]; then
+              echo "- Private credential handoff file: `$FILE`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$OK" != "true" ] || [ "$GATE" != "PASS" ]; then
+            exit 1
+          fi
+
+      - name: Re-run baseline after credential bootstrap
+        if: steps.gate.outputs.ok == 'true'
+        id: final_gate
+        shell: bash
+        env:
+          RUNTIME_URL: ${{ steps.runtime_deploy.outputs.runtime_url }}
+        run: |
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5             "$RUNTIME_URL?view=__runtime_gate&mode=baseline&token=$RUNTIME_GATE_TOKEN"             -o /tmp/runtime-gate-result.json
 
           cat /tmp/runtime-gate-result.json | jq .
 
@@ -126,14 +186,11 @@ jobs:
           echo "ok=$OK" >> "$GITHUB_OUTPUT"
 
           {
-            echo "## Danh bạ runtime gate"
-            echo ""
-            echo "- Gate: **$GATE**"
-            echo "- Database baseline: $(jq -c '.database // {}' /tmp/runtime-gate-result.json)"
-            echo "- Credential state: $(jq -c '.credentials // {}' /tmp/runtime-gate-result.json)"
+            echo "- Final gate: **$GATE**"
+            echo "- Credential state after bootstrap: $(jq -c '.credentials // {}' /tmp/runtime-gate-result.json)"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$GATE" = "BLOCKED" ] || [ "$OK" != "true" ]; then
+          if [ "$OK" != "true" ] || [ "$GATE" != "PASS" ]; then
             exit 1
           fi
 
@@ -142,7 +199,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: danh-ba-runtime-gate-${{ github.run_id }}
-          path: /tmp/runtime-gate-result.json
+          path: |
+            /tmp/runtime-gate-initial.json
+            /tmp/credential-provision-result.json
+            /tmp/runtime-gate-result.json
           if-no-files-found: ignore
           retention-days: 30
 
@@ -160,7 +220,7 @@ jobs:
           npx clasp push -f
 
       - name: Discover or create production deployment
-        if: steps.gate.outputs.gate == 'PASS'
+        if: steps.final_gate.outputs.gate == 'PASS'
         id: production
         working-directory: apps/danh-ba-mttq-cao-bang
         shell: bash
@@ -177,11 +237,10 @@ jobs:
 
           DESC="DANH_BA_PRODUCTION | GitHub ${GITHUB_SHA}"
           if [ -n "$EXISTING_ID" ]; then
-            OUT="$(npx clasp create-deployment --deploymentId "$EXISTING_ID" --description "$DESC" --json)"
+            npx clasp create-deployment --deploymentId "$EXISTING_ID" --description "$DESC" --json > /tmp/production-deployment.json
             ID="$EXISTING_ID"
           else
-            OUT="$(npx clasp create-deployment --description "$DESC" --json)"
-            printf '%s' "$OUT" > /tmp/production-deployment.json
+            npx clasp create-deployment --description "$DESC" --json > /tmp/production-deployment.json
             ID="$(node - <<'NODE'
           const fs=require('fs');
           const x=JSON.parse(fs.readFileSync('/tmp/production-deployment.json','utf8'));
@@ -200,7 +259,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Public Web App smoke test
-        if: steps.gate.outputs.gate == 'PASS'
+        if: steps.final_gate.outputs.gate == 'PASS'
         shell: bash
         env:
           WEBAPP_URL: ${{ steps.production.outputs.url }}
@@ -210,9 +269,3 @@ jobs:
           grep -qi "Danh bạ" /tmp/public.html
           grep -qi "Danh bạ" /tmp/admin.html
           echo "- Public/admin HTML smoke: **PASS**" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Credential review gate
-        if: steps.gate.outputs.gate == 'REVIEW'
-        run: |
-          echo "Credential provisioning is still required. Production deployment was not changed." >> "$GITHUB_STEP_SUMMARY"
-          echo "No password, hash, salt, token or secret was printed."
