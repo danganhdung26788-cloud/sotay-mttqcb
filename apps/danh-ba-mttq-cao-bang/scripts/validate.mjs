@@ -9,7 +9,7 @@ const required = [
   'PublicDirectoryService.gs','ViewHelpers.gs','AdminPortalService.gs','ContactAdminService.gs',
   'OrganizationAdminService.gs','UserAdminService.gs','ImportExportService.gs','ImportPhase4Service.gs',
   'AuditQueryService.gs','AvatarService.gs','ReviewWorkflowService.gs','BackupService.gs',
-  'Phase4RegressionTest.gs','Code.gs','Index.html','Styles.html','Client.html','Admin.html',
+  'Phase4RegressionTest.gs','RuntimeGateConfig.gs','RuntimeGateService.gs','Code.gs','Index.html','Styles.html','Client.html','Admin.html',
   'AdminStyles.html','AdminClient.html','appsscript.json'
 ];
 
@@ -66,7 +66,8 @@ const requiredFunctions = [
   'adminSaveContactPhase4_','adminSetContactStatusPhase4_',
   'adminUploadAvatar_','adminRemoveAvatar_',
   'listReviewRequests_','adminReviewRequest_',
-  'adminCreateDatabaseBackup_','adminPreviewRestore_','adminRestoreOperationalData_'
+  'adminCreateDatabaseBackup_','adminPreviewRestore_','adminRestoreOperationalData_',
+  'runtimeGateResponse_','runRuntimeBaselineGate_'
 ];
 for (const fn of requiredFunctions) {
   const re = new RegExp('function\\s+' + fn + '\\s*\\(');
@@ -153,6 +154,17 @@ try {
 
 if (!fs.existsSync(path.resolve('scripts/setup-google-auth.ps1'))) {
   console.error('MISSING_GOOGLE_AUTH_HELPER');
+  failed = true;
+}
+
+const runtimeGateConfig = fs.readFileSync(path.join(src,'RuntimeGateConfig.gs'),'utf8');
+if (!runtimeGateConfig.includes("__RUNTIME_GATE_TOKEN_SHA256__")) {
+  console.error('RUNTIME_GATE_CONFIG_MUST_BE_DISABLED_IN_REPO');
+  failed = true;
+}
+const codeEntry = fs.readFileSync(path.join(src,'Code.gs'),'utf8');
+if (!codeEntry.includes("view === '__runtime_gate'") || !codeEntry.includes('runtimeGateResponse_(e)')) {
+  console.error('RUNTIME_GATE_ROUTE_MISSING');
   failed = true;
 }
 

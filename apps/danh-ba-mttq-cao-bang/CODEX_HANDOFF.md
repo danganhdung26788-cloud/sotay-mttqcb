@@ -1,5 +1,7 @@
 # CODEX HANDOFF — Danh bạ MTTQ tỉnh Cao Bằng
 
+> **Phase 4A update:** runtime baseline/deployment is now automated by `.github/workflows/danh-ba-deploy.yml`. Do not reintroduce manual wrapper execution, first-deployment UI steps, or `CLASP_DEPLOYMENT_ID` as a required secret. The workflow must return `PASS / REVIEW / BLOCKED` and fail closed on unexpected baseline/runtime errors.
+
 ## Mục tiêu
 Hoàn tất **Phase 4 runtime gate** và triển khai Google Apps Script Web App từ source đã chuẩn hóa trên GitHub.
 
@@ -91,11 +93,14 @@ npx clasp push -f
 Confirm all expected `.gs`, `.html`, and `appsscript.json` files exist in the Apps Script project.
 
 ## Step 4 — Initial runtime checks
-Run manually from Apps Script editor, using the private maintenance functions with trailing underscore if the source-hardening step renamed them:
+The Phase 4A workflow executes the private maintenance checks automatically through a one-time, SHA-256 protected runtime-gate deployment:
 
 - `setupDatabase_()`
 - `verifyDatabase_()`
 - `runPhase4RegressionTests_()`
+- credential-state check
+
+Do not create temporary editor wrappers for normal operation.
 
 Expected baseline:
 - communes = 56
@@ -120,16 +125,10 @@ Run the private provisioning function from Apps Script editor and let the user t
 
 All accounts must require password change on first login.
 
-## Step 6 — First Web App deployment
-Create the first deployment in Apps Script UI:
-- type: Web app
-- execute as: deploying user
-- access: public/anonymous as permitted by the configured account/domain and manifest
+## Step 6 — Web App deployment
+The Phase 4A workflow automatically creates the first versioned Web App deployment when runtime gate is PASS. On later runs it discovers the existing production deployment by the `DANH_BA_PRODUCTION` marker and updates it in place.
 
-Record the deployment ID into GitHub Actions secret:
-- `CLASP_DEPLOYMENT_ID`
-
-Do not expose OAuth credentials.
+No manual `CLASP_DEPLOYMENT_ID` secret is required. Do not expose OAuth credentials.
 
 ## Step 7 — Runtime acceptance
 Test public directory and admin portal.

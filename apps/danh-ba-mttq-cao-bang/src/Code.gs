@@ -1,5 +1,6 @@
 function doGet(e) {
   const view=String((e&&e.parameter&&e.parameter.view)||'').toLowerCase();
+  if (view === '__runtime_gate') return runtimeGateResponse_(e);
   return view==='admin' ? renderAdmin_() : renderIndex_();
 }
 function publicApi(action,payload) {
