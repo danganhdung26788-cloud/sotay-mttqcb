@@ -6,18 +6,19 @@ OAuth/clasp ban đầu đã hoàn thành và GitHub đã có `CLASPRC_JSON` + `C
 
 Người dùng **không cần**:
 
-- mở Apps Script Editor để chạy `setupDatabase_()` / `verifyDatabase_()` / regression;
+- mở Apps Script Editor để chạy baseline/regression;
 - chạy `clasp push` thủ công;
 - tạo Web App deployment đầu tiên bằng UI;
 - copy Deployment ID sang GitHub Secret;
-- tự kiểm tra credential bằng wrapper tạm.
+- tự kiểm tra credential bằng wrapper;
+- tự đặt một mật khẩu khởi tạo chung cho 57 tài khoản.
 
-Workflow Phase 4A tự xử lý các bước trên và chỉ trả một trong ba trạng thái: `PASS / REVIEW / BLOCKED`.
+Workflow tự bootstrap các tài khoản còn `PENDING_PROVISION` bằng mật khẩu tạm riêng từng tài khoản. Plaintext không đi qua GitHub log/chat; một file CSV bàn giao riêng tư được tạo trong My Drive của tài khoản triển khai và tên file được ghi vào workflow summary.
 
-## Chỉ cần người dùng khi thật sự có REVIEW
+## Khi người dùng thật sự cần tham gia
 
 1. Google yêu cầu OAuth/consent lại.
-2. Credential còn `PENDING_PROVISION` và cần quyết định mật khẩu khởi tạo an toàn.
+2. Cần lấy file `DANH_BA_CREDENTIAL_HANDOFF_*.csv` trong My Drive để bàn giao mật khẩu tạm cho đúng đơn vị; các tài khoản buộc đổi mật khẩu ở lần đăng nhập đầu.
 3. Baseline dữ liệu lệch bất thường cần quyết định nghiệp vụ.
 4. Một acceptance mutation có rủi ro không thể rollback tự động.
 
