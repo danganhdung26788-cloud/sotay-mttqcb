@@ -74,11 +74,11 @@ if (Get-Command gh -ErrorAction SilentlyContinue) {
 }
 
 Step "Hoan tat gate OAuth local"
-Write-Host "Sau khi workflow push source PASS:"
-Write-Host "1. Mo Apps Script project."
-Write-Host "2. Chay setupDatabase_()."
-Write-Host "3. Chay runPhase4RegressionTests_()."
-Write-Host "4. Tao Web App deployment dau tien bang giao dien Deploy > New deployment > Web app."
-Write-Host "5. Sau khi co deployment ID, luu no thanh GitHub Secret CLASP_DEPLOYMENT_ID."
+Write-Host "Tu day workflow Phase 4A se tu dong:"
+Write-Host "1. Push source va chay database/regression runtime gate."
+Write-Host "2. Kiem tra credential state."
+Write-Host "3. Tao/cap nhat Web App production neu gate PASS."
+Write-Host "4. Dung o REVIEW neu credential can provision."
 Write-Host ""
+Write-Host "KHONG can tao CLASP_DEPLOYMENT_ID bang tay."
 Write-Host "KHONG commit .clasp.json, .clasprc.json, token hoac mat khau."
