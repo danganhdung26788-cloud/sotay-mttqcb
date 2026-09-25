@@ -15,8 +15,9 @@
       <div class="eyebrow">ỦY BAN MTTQ VIỆT NAM TỈNH CAO BẰNG</div>
       <h1>DANH BẠ ĐIỆN THOẠI</h1>
     </div>
-    <div class="topbar-meta desktop-only">
-      <span id="contactCountTop">— cán bộ</span>
+    <div class="topbar-actions">
+      <div class="topbar-meta desktop-only"><span id="contactCountTop">— cán bộ</span></div>
+      <a class="admin-entry" href="?view=admin" title="Đăng nhập quản trị"><span aria-hidden="true">⚙</span><span class="admin-entry-text">Quản trị</span></a>
     </div>
   </header>
 
@@ -76,8 +77,22 @@
       </div>
 
       <div id="filterPanel" class="filter-panel">
-        <div id="groupChips" class="group-chips"></div>
-        <button id="groupMoreBtn" class="group-more-btn hidden" type="button" aria-expanded="false">Xem thêm</button>
+        <div class="advanced-filters">
+          <label><span>Cấp</span>
+            <select id="levelFilter">
+              <option value="">Tất cả cấp</option>
+              <option value="1">Cấp tỉnh</option>
+              <option value="2">Cấp xã/phường</option>
+              <option value="3">Cấp 3</option>
+            </select>
+          </label>
+          <label><span>Chức vụ</span><select id="positionFilter"><option value="">Tất cả chức vụ</option></select></label>
+          <button id="resetFiltersBtn" class="reset-filter-btn" type="button">Xóa bộ lọc</button>
+        </div>
+        <div class="group-filter-row">
+          <div id="groupChips" class="group-chips"></div>
+          <button id="groupMoreBtn" class="group-more-btn hidden" type="button" aria-expanded="false">Xem thêm</button>
+        </div>
       </div>
 
       <div class="results-bar">
