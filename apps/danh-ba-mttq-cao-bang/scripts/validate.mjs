@@ -68,7 +68,7 @@ const requiredFunctions = [
   'adminUploadAvatar_','adminRemoveAvatar_',
   'listReviewRequests_','adminReviewRequest_',
   'adminCreateDatabaseBackup_','adminPreviewRestore_','adminRestoreOperationalData_',
-  'runtimeGateResponse_','runRuntimeBaselineGate_','runtimeProvisionPendingCredentials_','provisionPendingCredentials_',
+  'runtimeGateResponse_','runRuntimeBaselineGate_','runtimeProvisionPendingCredentials_','runtimeNavigationGate_','provisionPendingCredentials_',
   'activeDbId_','withRuntimeDbOverride_',
   'runtimeAcceptancePrepare_','runtimeAcceptanceCore_','runtimeAcceptanceRestore_','runtimeAcceptanceCleanup_'
 ];

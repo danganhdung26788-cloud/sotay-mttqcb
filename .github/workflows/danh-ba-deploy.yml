@@ -194,8 +194,26 @@ jobs:
             exit 1
           fi
 
-      - name: Prepare private acceptance clone
+      - name: Verify rendered absolute navigation
         if: steps.final_gate.outputs.gate == 'PASS'
+        id: navigation_gate
+        shell: bash
+        env:
+          RUNTIME_URL: ${{ steps.runtime_deploy.outputs.runtime_url }}
+        run: |
+          curl -fsSL --max-time 120 \
+            "$RUNTIME_URL?view=__runtime_gate&mode=navigation&token=$RUNTIME_GATE_TOKEN" \
+            -o /tmp/runtime-navigation.json
+          cat /tmp/runtime-navigation.json | jq .
+          OK="$(jq -r '.ok // false' /tmp/runtime-navigation.json)"
+          GATE="$(jq -r '.gate // "BLOCKED"' /tmp/runtime-navigation.json)"
+          echo "ok=$OK" >> "$GITHUB_OUTPUT"
+          echo "gate=$GATE" >> "$GITHUB_OUTPUT"
+          echo "- Rendered navigation: **$GATE**" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$OK" != "true" ] || [ "$GATE" != "PASS" ]; then exit 1; fi
+
+      - name: Prepare private acceptance clone
+        if: steps.final_gate.outputs.gate == 'PASS' && steps.navigation_gate.outputs.gate == 'PASS'
         id: acceptance_prepare
         shell: bash
         env:
@@ -283,6 +301,7 @@ jobs:
             /tmp/runtime-gate-initial.json
             /tmp/credential-provision-result.json
             /tmp/runtime-gate-result.json
+            /tmp/runtime-navigation.json
             /tmp/acceptance-prepare.json
             /tmp/acceptance-core.json
             /tmp/acceptance-restore.json
@@ -304,7 +323,7 @@ jobs:
           npx clasp push -f
 
       - name: Discover or create production deployment
-        if: success() && steps.final_gate.outputs.gate == 'PASS' && steps.acceptance_prepare.outputs.gate == 'PASS' && steps.acceptance_core.outputs.gate == 'PASS' && steps.acceptance_restore.outputs.gate == 'PASS' && steps.acceptance_cleanup.outputs.gate == 'PASS'
+        if: success() && steps.final_gate.outputs.gate == 'PASS' && steps.navigation_gate.outputs.gate == 'PASS' && steps.acceptance_prepare.outputs.gate == 'PASS' && steps.acceptance_core.outputs.gate == 'PASS' && steps.acceptance_restore.outputs.gate == 'PASS' && steps.acceptance_cleanup.outputs.gate == 'PASS'
         id: production
         working-directory: apps/danh-ba-mttq-cao-bang
         shell: bash
@@ -352,7 +371,5 @@ jobs:
           curl -fsSL --retry 8 --retry-all-errors --retry-delay 5 "$WEBAPP_URL?view=admin" -o /tmp/admin.html
           grep -qi "Danh bạ" /tmp/public.html
           grep -qi "Danh bạ" /tmp/admin.html
-          grep -Fq "view=admin" /tmp/public.html
-          grep -Fq "script.google.com/macros/s/" /tmp/public.html
-          grep -Fq "script.google.com/macros/s/" /tmp/admin.html
-          echo "- Public/admin HTML + absolute navigation smoke: **PASS**" >> "$GITHUB_STEP_SUMMARY"
+          grep -qi "Quản trị" /tmp/admin.html
+          echo "- Public/admin route smoke: **PASS**" >> "$GITHUB_STEP_SUMMARY"

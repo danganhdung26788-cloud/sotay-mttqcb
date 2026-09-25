@@ -75,6 +75,37 @@ function runRuntimeBaselineGate_(token) {
   };
 }
 
+function runtimeNavigationGate_(token) {
+  requireRuntimeGateToken_(token);
+
+  const webAppUrl = currentWebAppUrl_();
+  const publicHtml = renderIndex_().getContent();
+  const adminHtml = renderAdmin_().getContent();
+
+  const adminHref = 'href="' + webAppUrl + '?view=admin"';
+  const publicHref = 'href="' + webAppUrl + '"';
+  const publicAdminLinkOk =
+    publicHtml.indexOf(adminHref) >= 0 &&
+    publicHtml.indexOf('class="admin-entry"') >= 0 &&
+    publicHtml.indexOf('target="_top"') >= 0;
+  const adminReturnLinkOk =
+    adminHtml.indexOf(publicHref) >= 0 &&
+    adminHtml.indexOf('class="ghost-link"') >= 0 &&
+    adminHtml.indexOf('target="_top"') >= 0;
+  const absoluteUrlOk =
+    /^https:\/\/script\.google\.com\/macros\/s\/.+\/(?:exec|dev)$/.test(webAppUrl);
+
+  const ok = absoluteUrlOk && publicAdminLinkOk && adminReturnLinkOk;
+  return {
+    ok:ok,
+    gate:ok ? 'PASS' : 'BLOCKED',
+    absolute_url: absoluteUrlOk,
+    public_to_admin: publicAdminLinkOk,
+    admin_to_public: adminReturnLinkOk,
+    url_mode: /\/dev$/.test(webAppUrl) ? 'DEV' : 'EXEC'
+  };
+}
+
 function runtimeProvisionPendingCredentials_(token) {
   requireRuntimeGateToken_(token);
   const before = runtimeCredentialState_();
@@ -106,6 +137,9 @@ function runtimeGateResponse_(e) {
     switch (mode) {
       case 'provision':
         result = runtimeProvisionPendingCredentials_(token);
+        break;
+      case 'navigation':
+        result = runtimeNavigationGate_(token);
         break;
       case 'acceptance_prepare':
         result = runtimeAcceptancePrepare_(token);
