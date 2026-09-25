@@ -29,18 +29,19 @@
 - [x] `runPhase4RegressionTests_().ok === true`.
 - [x] Phase 4A runtime-gate automation merged to `main`.
 - [x] Automated credential-state result recorded: 57 pending / 57 empty hashes / 57 must-change.
-- [x] Phase 4B safe auto-provision implementation prepared on protected branch.
+- [x] Phase 4B safe auto-provision merged and runtime PASS.
 
 ## Runtime gate / deployment
-- [ ] Phase 4B branch merged after CI PASS.
-- [ ] Automated per-user credential bootstrap PASS.
-- [ ] Private Drive credential handoff file created and verified PRIVATE.
-- [ ] Final credential-state gate PASS.
-- [ ] Automated first production Web App deployment PASS.
-- [ ] Production deployment ID and Web App URL recorded by workflow.
-- [ ] Public/admin HTML smoke PASS.
+- [x] Phase 4B branch merged after CI PASS.
+- [x] Automated per-user credential bootstrap PASS: 57/57 PROVISIONED.
+- [x] Private Drive credential handoff file created and verified PRIVATE by runtime.
+- [x] Final credential-state gate PASS: pending/hash/salt empty = 0; must-change = 57.
+- [x] Automated first production Web App deployment PASS.
+- [x] Production deployment ID and Web App URL recorded by workflow.
+- [x] Public/admin HTML smoke PASS.
+- [x] Phase 4C clone-only acceptance implementation prepared on protected branch.
 
-## Full acceptance — pending
+## Full acceptance — Phase 4C runtime pending
 - [ ] Public directory runtime PASS.
 - [ ] Accent-insensitive global search PASS.
 - [ ] Public payload does not expose USERS/password/AUDIT/REVIEW internals.

@@ -9,7 +9,7 @@
 - Google OAuth, `CLASPRC_JSON`, `CLASP_JSON`, source push, database baseline và Phase 4 regression đã PASS.
 - Không lưu credential/token/mật khẩu trong repository hoặc GitHub log.
 
-## Cơ chế Phase 4A/4B
+## Cơ chế Phase 4A/4B/4C
 
 Sau khi thay đổi được merge vào `main`, workflow tự thực hiện:
 
@@ -27,11 +27,13 @@ Sau khi thay đổi được merge vào `main`, workflow tự thực hiện:
    - runtime phải xác minh file ở trạng thái `PRIVATE` và không có viewer/editor phụ trước khi ghi credential vào DB;
    - nếu lỗi trong quá trình ghi, rollback các hàng đã thay đổi và đưa file handoff vào thùng rác.
 8. Chạy lại runtime gate sau bootstrap.
-9. Lưu evidence JSON trong GitHub Actions artifact; evidence không chứa mật khẩu/hash/salt/token.
-10. Xóa deployment kiểm thử.
-11. Khôi phục Apps Script HEAD về source sạch từ repository.
-12. Nếu gate cuối `PASS`, tự tìm deployment production theo marker `DANH_BA_PRODUCTION`; nếu chưa có thì tạo, nếu có thì cập nhật.
-13. Smoke-test trang public và admin.
+9. Tạo thư mục test riêng tư và copy production database thành clone; mọi mutation acceptance chỉ chạy trên clone.
+10. Tự kiểm tra public payload/search, province admin + 2 UNIT_ADMIN, scope, level-3, contact CRUD, session invalidation, avatar, review OPTIONAL/REQUIRED, stale approval.
+11. Tự tạo backup clone, kiểm tra BACKUP_LOG, chặn restore source không đăng ký, restore thật trên clone và xác nhận PRE_RESTORE.
+12. Dọn toàn bộ clone/test artifacts; evidence JSON không chứa mật khẩu/hash/salt/token.
+13. Xóa deployment kiểm thử và khôi phục Apps Script HEAD về source sạch.
+14. Chỉ khi toàn bộ gate PASS mới tạo/cập nhật deployment production theo marker `DANH_BA_PRODUCTION`.
+15. Smoke-test trang public và admin production.
 
 Không còn yêu cầu người dùng tự tạo Web App deployment đầu tiên, copy `CLASP_DEPLOYMENT_ID`, chạy wrapper, hoặc provision tài khoản bằng Apps Script Editor.
 
@@ -41,18 +43,6 @@ Không còn yêu cầu người dùng tự tạo Web App deployment đầu tiên
 - `REVIEW`: trạng thái trung gian khi runtime phát hiện credential cần bootstrap; workflow tự xử lý tiếp.
 - `BLOCKED`: baseline/regression/runtime/provisioning không đạt; pipeline dừng fail-closed.
 
-## Việc vẫn cần acceptance trước RUNTIME PASS
+## Gate còn lại trước RUNTIME PASS
 
-- Public directory và tìm kiếm không dấu.
-- Province admin + ít nhất 02 UNIT_ADMIN.
-- Cross-scope read/write DENIED.
-- Level-3 hierarchy.
-- Contact CRUD.
-- Password/session invalidation.
-- Avatar security.
-- Review OPTIONAL/REQUIRED + stale approval.
-- Backup + BACKUP_LOG.
-- Restore preview source không đăng ký phải DENIED.
-- Restore chỉ trên clone/test DB.
-
-Chỉ sau khi toàn bộ acceptance trên PASS mới cập nhật `SOURCE_STATUS.md` thành **RUNTIME PASS**.
+Phase 4C thực hiện acceptance tự động trên clone. Chỉ sau khi workflow thật trên `main` chứng minh tất cả pha `prepare/core/restore/cleanup` PASS, production smoke PASS và read-back production không đổi baseline thì mới cập nhật `SOURCE_STATUS.md` thành **RUNTIME PASS**.

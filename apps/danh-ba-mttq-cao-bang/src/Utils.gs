@@ -1,5 +1,21 @@
+let RUNTIME_DB_OVERRIDE_ID_ = '';
+
+function activeDbId_() {
+  return String(RUNTIME_DB_OVERRIDE_ID_ || CONFIG.DB_ID);
+}
+
 function db_() {
-  return SpreadsheetApp.openById(CONFIG.DB_ID);
+  return SpreadsheetApp.openById(activeDbId_());
+}
+
+function withRuntimeDbOverride_(dbId, fn) {
+  const previous = RUNTIME_DB_OVERRIDE_ID_;
+  RUNTIME_DB_OVERRIDE_ID_ = String(dbId || '');
+  try {
+    return fn();
+  } finally {
+    RUNTIME_DB_OVERRIDE_ID_ = previous;
+  }
 }
 
 function sheet_(name) {
